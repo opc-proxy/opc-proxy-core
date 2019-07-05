@@ -35,7 +35,7 @@ namespace OpcInfluxConnect{
                 );
                 */
 
-                logger.Debug("Write to influx value for {0} to {1} at {2}", items.name, itm.Value, itm.SourceTimestamp);
+                logger.Debug("Write to influxDB value for {0} to {1} at {2}", items.name, itm.Value, itm.SourceTimestamp);
             }
         }
 
@@ -45,7 +45,7 @@ namespace OpcInfluxConnect{
                 Metrics.Collector = new CollectorConfiguration()
                     //.Tag.With("host", Environment.GetEnvironmentVariable("COMPUTERNAME"))
                     .Batch.AtInterval(TimeSpan.FromSeconds(5))
-                    .WriteTo.InfluxDB("http://localhost:8086", "data_belli")
+                    .WriteTo.InfluxDB("http://localhost:8086", "opcProxyData")
                     .CreateCollector();
                 logger.Debug("OpcInfluxConnect initialized");
             }

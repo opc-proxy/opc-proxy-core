@@ -7,6 +7,7 @@ using converter;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
+using System.Threading;
 
 using System.Timers;
 
@@ -16,17 +17,20 @@ namespace OpcProxyCore{
     /// Class that manages the comunication between all the services, dbCache, OPCclient, TCP server, kafka server.
     /// Takes care of initialization of all services and of setting up event handlers.
     /// </summary>
-    public class serviceManager : logged{
+    public class serviceManager {
         private cacheDB db;
         private OPCclient opc;
 
         private List<IOPCconnect> connector_list;
 
         private JObject _config;
+        public static Logger logger = null;
         
         public serviceManager(JObject config){
             
             _config = config;
+            init_logging();
+            logger = LogManager.GetLogger(this.GetType().Name);
 
             opc = new OPCclient(config);
             db = new cacheDB(config);
@@ -36,6 +40,9 @@ namespace OpcProxyCore{
             // setting up the comunication line back to the manager
             opc.setPointerToManager(this);
             db.setPointerToManager(this);
+
+            connectOpcClient();
+            browseNodesFillCache();
         }
         
         public void addConnector(IOPCconnect connector){
@@ -50,6 +57,46 @@ namespace OpcProxyCore{
 
         public void connectOpcClient(){
             opc.connect();
+        }
+
+        public void run(){
+            subscribeOpcNodes();
+            initConnectors();
+            wait();
+        }
+        
+        public static void init_logging(){
+            // Logging 
+            var config = new NLog.Config.LoggingConfiguration();
+            // Targets where to log to: File and Console
+            //var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "file.txt" };
+            var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole");
+            
+            // Rules for mapping loggers to targets            
+            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
+            //config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
+
+            // Apply config           
+            NLog.LogManager.Configuration = config;
+        }
+
+
+        public void wait(){
+             ManualResetEvent quitEvent = new ManualResetEvent(false);
+            try
+            {
+                Console.CancelKeyPress += (sender, eArgs) =>
+                {
+                    quitEvent.Set();
+                    eArgs.Cancel = true;
+                };
+
+            }
+            catch
+            {
+            }
+            // wait for timeout or Ctrl-C
+            quitEvent.WaitOne(-1);                       
         }
 
          /// <summary>
