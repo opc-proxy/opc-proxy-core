@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 using Opc.Ua.Client; 
 using Opc.Ua; 
-using ProxyUtils;
+using OpcProxyCore;
 using Newtonsoft.Json.Linq;
 
 using InfluxDB.Collector;

@@ -1,5 +1,5 @@
 using OpcProxyClient;
-using Newtonsoft.Json;
+
 using Newtonsoft.Json.Linq;
 using Opc.Ua;
 using NLog;
@@ -10,7 +10,7 @@ using System;
 
 using System.Timers;
 
-namespace ProxyUtils{
+namespace OpcProxyCore{
 
     /// <summary>
     /// Class that manages the comunication between all the services, dbCache, OPCclient, TCP server, kafka server.
@@ -140,7 +140,11 @@ namespace ProxyUtils{
     }
 
     public class logged{
-        public static Logger logger = LogManager.GetCurrentClassLogger();
+        public static Logger logger = null;
+        public logged(){
+            logger = LogManager.GetLogger(this.GetType().Name);
+        } 
+
     }
 
     /// <summary>

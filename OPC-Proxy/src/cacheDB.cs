@@ -11,7 +11,7 @@ using Opc.Ua ;
 using Opc.Ua.Client;
 using OpcProxyClient ;
 
-namespace ProxyUtils{
+namespace OpcProxyCore{
   public enum ReadStatusCode : int
     {
         Ok = 0,

@@ -2,18 +2,13 @@ using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Opc.Ua.Client.Controls;
 
-using  converter;
-
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-using ProxyUtils;
+using OpcProxyCore;
 
 namespace OpcProxyClient
 {

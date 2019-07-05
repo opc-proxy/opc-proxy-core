@@ -1,6 +1,6 @@
 using System;
 using Xunit;
-using ProxyUtils;
+using OpcProxyCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using LiteDB;

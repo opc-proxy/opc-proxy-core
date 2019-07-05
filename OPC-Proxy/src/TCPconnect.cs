@@ -20,7 +20,7 @@ using System.Collections.Generic;
 
 using OpcProxyClient; 
 using Opc.Ua; 
-using ProxyUtils;
+using OpcProxyCore;
 using Newtonsoft.Json.Linq;
 using NLog;
 

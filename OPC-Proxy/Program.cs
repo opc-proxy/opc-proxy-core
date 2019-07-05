@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using ProxyUtils;
+using OpcProxyCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpcProxyClient;
