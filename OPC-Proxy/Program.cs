@@ -12,12 +12,7 @@ namespace OPC_Proxy
         static int Main(string[] args)
         {
 
-            JObject config = JObject.Parse(
-                "{isInMemory:true, filename:'pollo.dat', stopTimeout:-1, autoAccept:false, endpointURL:'opc.tcp://xeplc.physik.uzh.ch:4840/s7OPC'}"
-            );
-            
-            
-            serviceManager man = new serviceManager(config);            
+            serviceManager man = new serviceManager(args);            
 
             HttpImpl opcHttpConnector = new HttpImpl();
             InfluxImpl influx = new InfluxImpl();

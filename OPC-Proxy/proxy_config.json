@@ -1,0 +1,7 @@
+{
+    "isInMemory":true, 
+    "filename":"pollo.dat", 
+    "stopTimeout":-1, 
+    "autoAccept":false, 
+    "endpointURL":"opc.tcp://xeplc.physik.uzh.ch:4840/s7OPC"
+}

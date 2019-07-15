@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<UANodeSet LastModified="2019-04-23T11:49:21Z" xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd" xmlns:uax="http://opcfoundation.org/UA/2008/02/Types.xsd" xmlns:si="http://www.siemens.com/OPCUA/2017/SimaticNodeSetExtensions">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<UANodeSet LastModified="2019-07-09T15:58:32Z" xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd" xmlns:uax="http://opcfoundation.org/UA/2008/02/Types.xsd" xmlns:si="http://www.siemens.com/OPCUA/2017/SimaticNodeSetExtensions">
     <NamespaceUris>
         <Uri>urn:s7OPC</Uri>
         <Uri>http://opcfoundation.org/UA/DI/</Uri>
@@ -21,6 +21,11 @@
         <Alias Alias="HasProperty">i=46</Alias>
         <Alias Alias="HasComponent">i=47</Alias>
         <Alias Alias="TIME">ns=3;i=3006</Alias>
+        <Alias Alias="HasInOutVar">ns=3;i=4002</Alias>
+        <Alias Alias="HasInputVar">ns=3;i=4003</Alias>
+        <Alias Alias="HasOutputVar">ns=3;i=4004</Alias>
+        <Alias Alias="HasLocalVar">ns=3;i=4005</Alias>
+        <Alias Alias="HasBaseObject">ns=3;i=4006</Alias>
         <Alias Alias="EnumValueType">i=7594</Alias>
     </Aliases>
     <Extensions>
@@ -508,6 +513,42 @@
         <Reference ReferenceType="HasTypeDefinition">ns=2;i=1005</Reference>
     </References>
 </UAObject>
+<UAVariable NodeId="ns=3;s=&quot;ind_PV01_C&quot;" BrowseName="3:ind_PV01_C" ParentNodeId="ns=3;s=Inputs" DataType="BOOL" AccessLevel="3">
+    <DisplayName>ind_PV01_C</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=Inputs</Reference>
+    </References>
+</UAVariable>
+<UAVariable NodeId="ns=3;s=&quot;ind_PV01_O&quot;" BrowseName="3:ind_PV01_O" ParentNodeId="ns=3;s=Inputs" DataType="BOOL" AccessLevel="3">
+    <DisplayName>ind_PV01_O</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=Inputs</Reference>
+    </References>
+</UAVariable>
+<UAObject NodeId="ns=3;s=Outputs" BrowseName="3:Outputs" ParentNodeId="ns=3;s=PLC">
+    <DisplayName>Outputs</DisplayName>
+    <Description Locale="en-US">Holding all global outputs.</Description>
+    <References>
+        <Reference ReferenceType="HasComponent" IsForward="false">ns=3;s=PLC</Reference>
+        <Reference ReferenceType="HasTypeDefinition">ns=2;i=1005</Reference>
+    </References>
+</UAObject>
+<UAVariable NodeId="ns=3;s=&quot;set_PV01_C&quot;" BrowseName="3:set_PV01_C" ParentNodeId="ns=3;s=Outputs" DataType="BOOL" AccessLevel="3">
+    <DisplayName>set_PV01_C</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=Outputs</Reference>
+    </References>
+</UAVariable>
+<UAVariable NodeId="ns=3;s=&quot;set_PV01_O&quot;" BrowseName="3:set_PV01_O" ParentNodeId="ns=3;s=Outputs" DataType="BOOL" AccessLevel="3">
+    <DisplayName>set_PV01_O</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=Outputs</Reference>
+    </References>
+</UAVariable>
 <UAVariable NodeId="ns=3;s=&quot;test&quot;" BrowseName="3:test" ParentNodeId="ns=3;s=Inputs" DataType="INT" AccessLevel="3">
     <DisplayName>test</DisplayName>
     <References>
@@ -520,6 +561,144 @@
     <References>
         <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
         <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=Inputs</Reference>
+    </References>
+</UAVariable>
+<UAVariable NodeId="ns=3;s=&quot;test_io_1&quot;" BrowseName="3:test_io_1" ParentNodeId="ns=3;s=Outputs" DataType="BOOL" AccessLevel="3">
+    <DisplayName>test_io_1</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=Outputs</Reference>
+    </References>
+</UAVariable>
+<UAObject NodeId="ns=3;s=DataBlocksInstance" BrowseName="3:DataBlocksInstance" ParentNodeId="ns=3;s=PLC">
+    <DisplayName>DataBlocksInstance</DisplayName>
+    <Description Locale="en-US">Holding all instance datablocks.</Description>
+    <References>
+        <Reference ReferenceType="HasComponent" IsForward="false">ns=3;s=PLC</Reference>
+        <Reference ReferenceType="HasTypeDefinition">ns=2;i=1005</Reference>
+    </References>
+</UAObject>
+<UAReferenceType NodeId="ns=3;i=4002" BrowseName="3:HasInOutVar">
+    <DisplayName>HasInOutVar</DisplayName>
+    <References>
+        <Reference ReferenceType="HasSubtype" IsForward="false">i=47</Reference>
+    </References>
+    <InverseName>InOutVarOf</InverseName>
+</UAReferenceType>
+<UAObject NodeId="ns=3;i=5067" BrowseName="3:InOuts" ParentNodeId="ns=3;i=1003">
+    <DisplayName>InOuts</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasModellingRule">i=80</Reference>
+    </References>
+</UAObject>
+<UAReferenceType NodeId="ns=3;i=4003" BrowseName="3:HasInputVar">
+    <DisplayName>HasInputVar</DisplayName>
+    <References>
+        <Reference ReferenceType="HasSubtype" IsForward="false">i=47</Reference>
+    </References>
+    <InverseName>InputVarOf</InverseName>
+</UAReferenceType>
+<UAObject NodeId="ns=3;i=5079" BrowseName="3:Inputs" ParentNodeId="ns=3;i=1003">
+    <DisplayName>Inputs</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasModellingRule">i=80</Reference>
+    </References>
+</UAObject>
+<UAReferenceType NodeId="ns=3;i=4004" BrowseName="3:HasOutputVar">
+    <DisplayName>HasOutputVar</DisplayName>
+    <References>
+        <Reference ReferenceType="HasSubtype" IsForward="false">i=47</Reference>
+    </References>
+    <InverseName>OutputVarOf</InverseName>
+</UAReferenceType>
+<UAObject NodeId="ns=3;i=5026" BrowseName="3:Outputs" ParentNodeId="ns=3;i=1003">
+    <DisplayName>Outputs</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasModellingRule">i=80</Reference>
+    </References>
+</UAObject>
+<UAReferenceType NodeId="ns=3;i=4005" BrowseName="3:HasLocalVar">
+    <DisplayName>HasLocalVar</DisplayName>
+    <References>
+        <Reference ReferenceType="HasSubtype" IsForward="false">i=47</Reference>
+    </References>
+    <InverseName>LocalVarOf</InverseName>
+</UAReferenceType>
+<UAObject NodeId="ns=3;i=5066" BrowseName="3:Static" ParentNodeId="ns=3;i=1003">
+    <DisplayName>Static</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasModellingRule">i=80</Reference>
+    </References>
+</UAObject>
+<UAReferenceType NodeId="ns=3;i=4006" BrowseName="3:HasBaseObject">
+    <DisplayName>HasBaseObject</DisplayName>
+    <References>
+        <Reference ReferenceType="HasSubtype" IsForward="false">i=47</Reference>
+    </References>
+    <InverseName>BaseObjectOf</InverseName>
+</UAReferenceType>
+<UAObject NodeId="ns=3;i=5002" BrowseName="3:Base" ParentNodeId="ns=3;i=1003">
+    <DisplayName>Base</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">ns=3;i=1003</Reference>
+        <Reference ReferenceType="HasModellingRule">i=80</Reference>
+    </References>
+</UAObject>
+<UAObjectType NodeId="ns=3;i=1003" BrowseName="3:SimaticBlockType" IsAbstract="true">
+    <DisplayName>SimaticBlockType</DisplayName>
+    <Description Locale="en-US">This type represents the in the DataBlocksInstance folder the accessible function instances.</Description>
+    <References>
+        <Reference ReferenceType="HasSubtype" IsForward="false">ns=2;i=1003</Reference>
+        <Reference ReferenceType="HasInOutVar">ns=3;i=5067</Reference>
+        <Reference ReferenceType="HasInputVar">ns=3;i=5079</Reference>
+        <Reference ReferenceType="HasOutputVar">ns=3;i=5026</Reference>
+        <Reference ReferenceType="HasLocalVar">ns=3;i=5066</Reference>
+        <Reference ReferenceType="HasBaseObject">ns=3;i=5002</Reference>
+    </References>
+</UAObjectType>
+<UAObjectType NodeId="ns=3;s=OT_&quot;Block_2&quot;" BrowseName="3:&quot;Block_2&quot;">
+    <DisplayName>"Block_2"</DisplayName>
+    <References>
+        <Reference ReferenceType="HasSubtype" IsForward="false">ns=3;i=1003</Reference>
+    </References>
+</UAObjectType>
+<UAObject NodeId="ns=3;s=&quot;Block_2_DB&quot;" BrowseName="3:Block_2_DB" ParentNodeId="ns=3;s=DataBlocksInstance">
+    <DisplayName>Block_2_DB</DisplayName>
+    <References>
+        <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=DataBlocksInstance</Reference>
+        <Reference ReferenceType="HasTypeDefinition">ns=3;s=OT_"Block_2"</Reference>
+    </References>
+</UAObject>
+<UAObject NodeId="ns=3;s=&quot;Block_2_DB&quot;.InOuts" BrowseName="3:InOuts" ParentNodeId="ns=3;s=&quot;Block_2_DB&quot;">
+    <DisplayName>InOuts</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasInOutVar" IsForward="false">ns=3;s="Block_2_DB"</Reference>
+    </References>
+</UAObject>
+<UAVariable NodeId="ns=3;s=&quot;Block_2_DB&quot;.&quot;test&quot;" BrowseName="3:test" ParentNodeId="ns=3;s=&quot;Block_2_DB&quot;.InOuts" DataType="BOOL" AccessLevel="3">
+    <DisplayName>test</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="HasInOutVar" IsForward="false">ns=3;s="Block_2_DB".InOuts</Reference>
+    </References>
+</UAVariable>
+<UAObject NodeId="ns=3;s=&quot;Block_2_DB&quot;.Static" BrowseName="3:Static" ParentNodeId="ns=3;s=&quot;Block_2_DB&quot;">
+    <DisplayName>Static</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasLocalVar" IsForward="false">ns=3;s="Block_2_DB"</Reference>
+    </References>
+</UAObject>
+<UAVariable NodeId="ns=3;s=&quot;Block_2_DB&quot;.&quot;toggle&quot;" BrowseName="3:toggle" ParentNodeId="ns=3;s=&quot;Block_2_DB&quot;.Static" DataType="BOOL" AccessLevel="3">
+    <DisplayName>toggle</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="HasLocalVar" IsForward="false">ns=3;s="Block_2_DB".Static</Reference>
     </References>
 </UAVariable>
 <UAObject NodeId="ns=3;s=DataBlocksGlobal" BrowseName="3:DataBlocksGlobal" ParentNodeId="ns=3;s=PLC">
@@ -570,6 +749,69 @@
     <References>
         <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
         <Reference ReferenceType="HasComponent" IsForward="false">ns=3;s="IEC_Timer_0_DB"</Reference>
+    </References>
+</UAVariable>
+<UAObject NodeId="ns=3;s=&quot;test_blk&quot;" BrowseName="3:test_blk" ParentNodeId="ns=3;s=DataBlocksInstance">
+    <DisplayName>test_blk</DisplayName>
+    <References>
+        <Reference ReferenceType="Organizes" IsForward="false">ns=3;s=DataBlocksInstance</Reference>
+        <Reference ReferenceType="HasTypeDefinition">ns=3;s=OT_"Block_2"</Reference>
+    </References>
+</UAObject>
+<UAObject NodeId="ns=3;s=&quot;test_blk&quot;.InOuts" BrowseName="3:InOuts" ParentNodeId="ns=3;s=&quot;test_blk&quot;">
+    <DisplayName>InOuts</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasInOutVar" IsForward="false">ns=3;s="test_blk"</Reference>
+    </References>
+</UAObject>
+<UAVariable NodeId="ns=3;s=&quot;test_blk&quot;.&quot;test&quot;" BrowseName="3:test" ParentNodeId="ns=3;s=&quot;test_blk&quot;.InOuts" DataType="BOOL" AccessLevel="3">
+    <DisplayName>test</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="HasInOutVar" IsForward="false">ns=3;s="test_blk".InOuts</Reference>
+    </References>
+</UAVariable>
+<UAObject NodeId="ns=3;s=&quot;test_blk&quot;.Static" BrowseName="3:Static" ParentNodeId="ns=3;s=&quot;test_blk&quot;">
+    <DisplayName>Static</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasLocalVar" IsForward="false">ns=3;s="test_blk"</Reference>
+    </References>
+</UAObject>
+<UAVariable NodeId="ns=3;s=&quot;test_blk&quot;.&quot;toggle&quot;" BrowseName="3:toggle" ParentNodeId="ns=3;s=&quot;test_blk&quot;.Static" DataType="BOOL" AccessLevel="3">
+    <DisplayName>toggle</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="HasLocalVar" IsForward="false">ns=3;s="test_blk".Static</Reference>
+    </References>
+</UAVariable>
+<UAObject NodeId="ns=3;s=O_&quot;Block_2&quot;.InOuts" BrowseName="3:InOuts" ParentNodeId="ns=3;s=OT_&quot;Block_2&quot;">
+    <DisplayName>InOuts</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasInOutVar" IsForward="false">ns=3;s=OT_"Block_2"</Reference>
+    </References>
+</UAObject>
+<UAVariable NodeId="ns=3;s=V_&quot;Block_2&quot;.&quot;test&quot;" BrowseName="3:test" ParentNodeId="ns=3;s=O_&quot;Block_2&quot;.InOuts" DataType="BOOL">
+    <DisplayName>test</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="HasInOutVar" IsForward="false">ns=3;s=O_"Block_2".InOuts</Reference>
+    </References>
+</UAVariable>
+<UAObject NodeId="ns=3;s=O_&quot;Block_2&quot;.Static" BrowseName="3:Static" ParentNodeId="ns=3;s=OT_&quot;Block_2&quot;">
+    <DisplayName>Static</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=61</Reference>
+        <Reference ReferenceType="HasLocalVar" IsForward="false">ns=3;s=OT_"Block_2"</Reference>
+    </References>
+</UAObject>
+<UAVariable NodeId="ns=3;s=V_&quot;Block_2&quot;.&quot;toggle&quot;" BrowseName="3:toggle" ParentNodeId="ns=3;s=O_&quot;Block_2&quot;.Static" DataType="BOOL">
+    <DisplayName>toggle</DisplayName>
+    <References>
+        <Reference ReferenceType="HasTypeDefinition">i=63</Reference>
+        <Reference ReferenceType="HasLocalVar" IsForward="false">ns=3;s=O_"Block_2".Static</Reference>
     </References>
 </UAVariable>
 </UANodeSet>

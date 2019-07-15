@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
 using System.Threading;
-
+using System.IO;
 using System.Timers;
 
 namespace OpcProxyCore{
@@ -26,8 +26,36 @@ namespace OpcProxyCore{
         private JObject _config;
         public static Logger logger = null;
         
-        public serviceManager(JObject config){
+        public serviceManager(string[] args){
             
+            string config_file_path = "proxy_config.json";
+            
+            for(int k=0; k < args.Length; k++)  {
+                if(args[k] == "--config" && args.Length > k+1) {
+                    config_file_path = args[k+1];
+                }                
+            }
+
+            string json = "";
+            try 
+            {
+                using (StreamReader sr = new StreamReader(config_file_path)) 
+                {
+                    json = sr.ReadToEnd();
+                    JObject config = JObject.Parse(json);
+                    _init_constructor(config);
+                }
+            }
+            catch (Exception e) 
+            {
+                Console.WriteLine("An error occurred during initialization: ");
+                Console.WriteLine(e.Message);
+                Console.WriteLine("\nUsage:\n  exe_name --config path_to_file\n  if --config is not specified in will look for a file called 'proxy_config.json'\n");
+                System.Environment.Exit(0); 
+            }
+        }
+
+        public void _init_constructor(JObject config){
             _config = config;
             init_logging();
             logger = LogManager.GetLogger(this.GetType().Name);
@@ -43,6 +71,17 @@ namespace OpcProxyCore{
 
             connectOpcClient();
             browseNodesFillCache();
+        }
+        public serviceManager(JObject config){
+            try{
+                _init_constructor(config);
+            }
+            catch (Exception e) 
+            {   Console.WriteLine("An error occurred during initialization: ");
+                Console.WriteLine(e.Message);
+                System.Environment.Exit(0); 
+            }
+            
         }
         
         public void addConnector(IOPCconnect connector){
@@ -80,7 +119,11 @@ namespace OpcProxyCore{
             NLog.LogManager.Configuration = config;
         }
 
-
+        /// <summary>
+        /// Wait for a cancel event Ctrl-C key press. In future maybe add a better way to clean up before closing.
+        /// </summary>
+        // FIXME: see this better clean up 
+        // https://stackoverflow.com/questions/6546509/detect-when-console-application-is-closing-killed
         public void wait(){
              ManualResetEvent quitEvent = new ManualResetEvent(false);
             try
