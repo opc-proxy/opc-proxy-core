@@ -57,7 +57,7 @@ namespace OpcProxyCore{
 
         public void _init_constructor(JObject config){
             _config = config;
-            init_logging();
+            init_logging(config.ToObject<logConfigWrapper>().loggerConfig);
             logger = LogManager.GetLogger(this.GetType().Name);
 
             opc = new OPCclient(config);
@@ -101,19 +101,25 @@ namespace OpcProxyCore{
         public void run(){
             subscribeOpcNodes();
             initConnectors();
+            logger.Info("Running...Press Ctrl-C to exit...");
             wait();
         }
         
-        public static void init_logging(){
+        public static void init_logging(logConfig userConfig){
             // Logging 
             var config = new NLog.Config.LoggingConfiguration();
             // Targets where to log to: File and Console
             //var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "file.txt" };
             var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole");
             
+            LogLevel userLogLevel = LogLevel.Info;
+            if(userConfig.logLevel.ToLower() == "debug") userLogLevel = LogLevel.Debug;
+            if(userConfig.logLevel.ToLower() == "warning") userLogLevel = LogLevel.Warn;
+            if(userConfig.logLevel.ToLower() == "error") userLogLevel = LogLevel.Error;
+            if(userConfig.logLevel.ToLower() == "fatal") userLogLevel = LogLevel.Fatal;
+             
             // Rules for mapping loggers to targets            
-            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
-            //config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
+            config.AddRule(userLogLevel, LogLevel.Fatal, logconsole);
 
             // Apply config           
             NLog.LogManager.Configuration = config;
@@ -188,7 +194,7 @@ namespace OpcProxyCore{
 
         public void browseNodesFillCache(){
             
-            UANodeConverter ua = new UANodeConverter("nodeset.xml", opc.session.NamespaceUris);
+            UANodeConverter ua = new UANodeConverter(_config, opc.session.NamespaceUris);
             ua.fillCacheDB(db);
         }
 
@@ -216,6 +222,18 @@ namespace OpcProxyCore{
 
     }
 
+    public class logConfigWrapper{
+        public logConfig loggerConfig {get; set;}
+        public logConfigWrapper(){
+            loggerConfig = new logConfig();
+        }
+    }
+    public class logConfig{
+        public string logLevel {get; set;}
+        public logConfig(){
+            logLevel = "info";
+        }
+    }
 
     public class Managed : logged {
         private serviceManager _serviceManager;
@@ -252,7 +270,7 @@ namespace OpcProxyCore{
 
         /// <summary>
         /// This is to get the pointer to the service manager and have access to
-        /// all it methods. One needs to store this pointer to a local variable.
+        /// all its methods. One needs to store this pointer to a local variable.
         /// </summary>
         /// <param name="serv">Pointer to the current service manager</param>
         void setServiceManager( serviceManager serv);

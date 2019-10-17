@@ -35,11 +35,9 @@ namespace OpcProxyClient
 
     public class OPCclient : Managed
     {
-        const int ReconnectPeriod = 10;
+        public opcConfig user_config;
         public Session session;
         SessionReconnectHandler reconnectHandler;
-        string endpointURL;
-        int clientRunTime = Timeout.Infinite;
         static bool autoAccept = false;
         static ExitCode exitCode;
 
@@ -47,10 +45,7 @@ namespace OpcProxyClient
 
         public OPCclient(JObject config) 
         {
-            var _config = config.ToObject<opcConfig>();
-            endpointURL = _config.endpointURL;
-            autoAccept = _config.autoAccept;
-            clientRunTime = _config.stopTimeout <= 0 ? Timeout.Infinite : _config.stopTimeout * 1000;
+            user_config = config.ToObject<opcConfig>();
         }
 
 
@@ -67,39 +62,15 @@ namespace OpcProxyClient
                 return;
             }
 
-            /*ManualResetEvent quitEvent = new ManualResetEvent(false);
-            try
-            {
-                Console.CancelKeyPress += (sender, eArgs) =>
-                {
-                    quitEvent.Set();
-                    eArgs.Cancel = true;
-                };
+            // FIXME - Retry strategy to be implemented here
 
-            }
-            catch
-            {
-            }
-
-            // wait for timeout or Ctrl-C
-            quitEvent.WaitOne(clientRunTime);
-
-            // return error conditions
-            if (session.KeepAliveStopped)
-            {
-                exitCode = ExitCode.ErrorNoKeepAlive;
-                return;
-            }
-
-            exitCode = ExitCode.Ok;
-            */
         }
 
         public static ExitCode ExitCode { get => exitCode; }
 
         private async Task ConsoleSampleClient()
         {
-            logger.Info("1 - Create an Application Configuration.");
+            logger.Info("Creating Application Configuration.");
             exitCode = ExitCode.ErrorCreateApplication;
 
             ApplicationInstance application = new ApplicationInstance
@@ -125,6 +96,7 @@ namespace OpcProxyClient
                 if (config.SecurityConfiguration.AutoAcceptUntrustedCertificates)
                 {
                     autoAccept = true;
+                    logger.Warn("Automatically accepting untrusted certificates. Do not use in production. Change in 'OPC.Ua.SampleClient.Config.xml'.");
                 }
                 config.CertificateValidator.CertificateValidation += new CertificateValidationEventHandler(CertificateValidator_CertificateValidation);
             }
@@ -133,13 +105,13 @@ namespace OpcProxyClient
                 logger.Warn("missing application certificate, using unsecure connection.");
             }
 
-            logger.Info("2 - Discover endpoints of {0}.", endpointURL);
+            logger.Info("Discover endpoints of {0}.", user_config.endpointURL);
             exitCode = ExitCode.ErrorDiscoverEndpoints;
-            var selectedEndpoint = CoreClientUtils.SelectEndpoint(endpointURL, haveAppCertificate, 15000);
+            var selectedEndpoint = CoreClientUtils.SelectEndpoint(user_config.endpointURL, haveAppCertificate, 15000);
             logger.Info("    Selected endpoint uses: {0}",
                 selectedEndpoint.SecurityPolicyUri.Substring(selectedEndpoint.SecurityPolicyUri.LastIndexOf('#') + 1));
 
-            logger.Info("3 - Create a session with OPC UA server.");
+            logger.Info("Creating a session with OPC UA server.");
             exitCode = ExitCode.ErrorCreateSession;
             var endpointConfiguration = EndpointConfiguration.Create(config);
             var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, endpointConfiguration);
@@ -286,15 +258,15 @@ namespace OpcProxyClient
         public void subscribe(List<serverNode> serverNodes, List<EventHandler<MonItemNotificationArgs>> handlers){
 
 
-            logger.Info("5 - Create a subscription with publishing interval of 1 second.");
+            logger.Info("Creating a subscription with publishing interval of 1 second.");
             exitCode = ExitCode.ErrorCreateSubscription;
-            var subscription = new Subscription(session.DefaultSubscription) { PublishingInterval = 1000 };
+            var subscription = new Subscription(session.DefaultSubscription) { PublishingInterval = user_config.publishingInterval };
 
-            logger.Info("6 - Add a list of items (server current time and status) to the subscription.");
+            logger.Info("Adding a list of monitored nodes to the subscription.");
             exitCode = ExitCode.ErrorMonitoredItem;
             var list = new List<MonitoredItem> {};
 
-            logger.Warn("number of nodes : " + serverNodes.Count);
+            logger.Info("Number of nodes to be monitored: " + serverNodes.Count);
 
             // addind client notification handler
             foreach( var node in serverNodes){
@@ -306,19 +278,18 @@ namespace OpcProxyClient
                 monItem.Notification += OnNotification;
                 list.Add(monItem);
             }
-            // Adding all user defined notification handlers
+            // Adding all Connectors defined notification handlers
             foreach(var handler in handlers) {
                 MonitoredItemChanged += handler;
             }
 
             subscription.AddItems(list);
 
-            logger.Info("7 - Add the subscription to the session.");
+            logger.Info("Adding the subscription to the session.");
             exitCode = ExitCode.ErrorAddSubscription;
             session.AddSubscription(subscription);
             subscription.Create();
 
-            logger.Info("8 - Running...Press Ctrl-C to exit...");
             exitCode = ExitCode.ErrorRunning;
 
             
@@ -335,7 +306,7 @@ namespace OpcProxyClient
                 {
                     Console.WriteLine("--- RECONNECTING ---");
                     reconnectHandler = new SessionReconnectHandler();
-                    reconnectHandler.BeginReconnect(sender, ReconnectPeriod * 1000, Client_ReconnectComplete);
+                    reconnectHandler.BeginReconnect(sender, user_config.reconnectPeriod * 1000, Client_ReconnectComplete);
                 }
             }
         }
@@ -393,19 +364,23 @@ namespace OpcProxyClient
         }
 
     }
-
 /// <summary>
 /// class that holds Json configuration for the opc client
 /// </summary>
     public class opcConfig{
+        /// <summary> OPC server TCP URL endpoint</summary>
         public  string  endpointURL { get; set; }
-        public  bool  autoAccept { get; set; }
-        public  int stopTimeout { get; set; }
+
+        /// <summary> Time interval [seconds] to wait before retry to reconnect to OPC server</summary>
+        public int reconnectPeriod {get; set;}
+        
+        /// <summary> This is a subscription parameter, time intervall [millisecond] at which the OPC server will send node values updates.</summary>
+        public int publishingInterval {get; set;}
 
         public opcConfig(){
             endpointURL = "none";
-            autoAccept = true;
-            stopTimeout = -1; // infinite
+            reconnectPeriod = 10;     
+            publishingInterval = 1000;
         }
     }
 

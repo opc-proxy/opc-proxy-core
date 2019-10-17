@@ -2,13 +2,10 @@ using System;
 using System.Runtime.InteropServices;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text;
 using System.IO;
 using LiteDB;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Opc.Ua ;
-using Opc.Ua.Client;
 using OpcProxyClient ;
 
 namespace OpcProxyCore{
@@ -49,7 +46,7 @@ namespace OpcProxyCore{
         ///  [overwrite] - Boolean : if true force overwrite of DB file, false will load from file. Default false.
         /// </para>
         public cacheDB( JObject config ){
-            _config = config.ToObject<dbConfig>();
+            _config = config.ToObject<dbConfigWrapper>().nodesDatabase;
             init();
         }
 
@@ -259,6 +256,15 @@ namespace OpcProxyCore{
 
     }
     
+/// <summary> just a wrapper class for the JSON structure</summary>
+    public class dbConfigWrapper{
+        public dbConfig nodesDatabase {get; set;}
+
+        public dbConfigWrapper(){
+            nodesDatabase = new dbConfig();
+        }
+    }
+
     /// <summary>
     /// Configuration handler for DBcache
     /// </summary>

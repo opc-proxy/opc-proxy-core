@@ -3,9 +3,9 @@ using Opc.Ua.Export;
 using System;
 using System.Collections.Generic;
 using System.IO;
-
+using Newtonsoft.Json.Linq;
 using OpcProxyCore;
-using NLog;
+using System.Text.RegularExpressions;
 
 namespace converter {
 
@@ -16,16 +16,22 @@ namespace converter {
         string[] m_namespaceURIs;
         List<Node> out_nodeset;
         NamespaceTable session_namespace;
+        nodesConfig _config;
+        NodesSelector selector;
 
-        public UANodeConverter(string filename, NamespaceTable SessionNamespaceURIs){
+        public UANodeConverter(JObject config, NamespaceTable SessionNamespaceURIs){
 
-            using (Stream stream = new FileStream(filename, FileMode.Open)){
+            _config = config.ToObject<nodesConfigWrapper>().nodesLoader;
+
+            using (Stream stream = new FileStream(_config.filename, FileMode.Open)){
                 m_UANodeset = UANodeSet.Read(stream);
                 m_aliases = m_UANodeset.Aliases;
                 m_namespaceURIs = m_UANodeset.NamespaceUris;
                 out_nodeset = new List<Node>();
                 session_namespace = SessionNamespaceURIs;
             }
+            
+            selector = new NodesSelector(_config);
             
         }
 
@@ -166,6 +172,7 @@ namespace converter {
         }
 
         public List<Node> convertToLocalNodeset(){
+            // FIXME - possibly this function can be deleted
 
             foreach ( Opc.Ua.Export.UANode node in m_UANodeset.Items){
 
@@ -221,48 +228,62 @@ namespace converter {
 
             // connect the server index to the corresponding xml_index
             db.updateNamespace(session_namespace);
-            
-            foreach ( Opc.Ua.Export.UANode node in m_UANodeset.Items){
 
-                if(node.GetType().ToString() == "Opc.Ua.Export.UAVariable"){
+            foreach (Opc.Ua.Export.UANode node in m_UANodeset.Items)
+            {
 
-                    bool skip = false;
+                if (node.GetType().ToString() != "Opc.Ua.Export.UAVariable") continue;
 
-                    Opc.Ua.Export.UAVariable xml_node = node as UAVariable;
+                Opc.Ua.Export.UAVariable xml_node = node as UAVariable;
 
-                    // creating the variableNode
-                    dbNode db_node =  new dbNode();
-                    db_node.classType = node.GetType().ToString();
+                // Apply userdefined matching criteria
+                if (!selector.selectNode(xml_node)) continue;
 
-                    // Assign NodeID
-                    db_node.identifier = getIdentifierToString(xml_node.NodeId) ;
-                    // Assign data type
-                    db_node.systemType = get_systemDataType(xml_node);
-                    // Assign internal index
-                    db_node.internalIndex = ((int)getNodeNamespaceIndex(xml_node.NodeId));
+                // creating the variableNode
+                dbNode db_node = new dbNode();
+                db_node.classType = node.GetType().ToString();
 
-                    // Assign Rank and other
-                    // FIXME
-                    //db_node.ValueRank   = xml_node.ValueRank;
-                    if(xml_node.ValueRank > 1 ) {
-                        skip = true;
-                        logger.Error("Arrays are not supported yet. Skip Node: " + node.BrowseName);
-                    }
-                    // skipping not built in types... FIXME
-                    if( !db_node.systemType.StartsWith("System") ){
-                        skip = true;
-                        logger.Error("Only System types are supported for now. Skip Node: " + node.BrowseName + "  type: " + db_node.systemType );
-                    }
-                    if(xml_node.DisplayName != null && xml_node.DisplayName[0] != null)
-                        db_node.name  = node.DisplayName[0].Value;
-                    else {
-                        db_node.name = node.BrowseName;
-                        logger.Warn("Node: " + node.BrowseName + "  does not have DisplayName, using browseName instead");
-                    }
+                // Assign NodeID
+                db_node.identifier = getIdentifierToString(xml_node.NodeId);
+                // Assign data type
+                db_node.systemType = get_systemDataType(xml_node);
+                // Assign internal index
+                db_node.internalIndex = ((int)getNodeNamespaceIndex(xml_node.NodeId));
 
-                    if(db_node.systemType.ToLower() != "null" && !skip)
-                        db.nodes.Insert(db_node);
+                // Assign Rank and other
+                // FIXME
+                //db_node.ValueRank   = xml_node.ValueRank;
+                if (xml_node.ValueRank > 1)
+                {
+                    logger.Error("Arrays are not supported yet. Skip Node: " + node.BrowseName);
+                    continue;
                 }
+                // skipping not built in types... FIXME
+                if (!db_node.systemType.StartsWith("System") || db_node.systemType.ToLower() == "null")
+                {
+                    logger.Error("Only System types are supported for now. Skip Node: " + node.BrowseName + "  type: " + db_node.systemType);
+                    continue;
+                }
+
+                // assign user defined target name
+                if (_config.targetIdentifier == "DisplayName")
+                {
+                    if (xml_node.DisplayName != null && xml_node.DisplayName[0] != null)
+                        db_node.name = node.DisplayName[0].Value;
+                    else
+                    {
+                        logger.Error("Node: " + node.BrowseName + "  does not have DisplayName, using browseName instead");
+                        db_node.name = node.BrowseName;
+                    }
+                }
+                else
+                {
+                    db_node.name = node.BrowseName;
+                }
+
+                // Adding node to cache DB
+                db.nodes.Insert(db_node);
+
 
             }
 
@@ -306,4 +327,93 @@ namespace converter {
             else return null;
         }
     }
+
+
+/// <summary> Just a class wrapper to simulate the JSON hierarchy in the configuration file.</summary>
+public class nodesConfigWrapper{
+    public nodesConfig nodesLoader {get; set;}
+
+    public nodesConfigWrapper(){
+        nodesLoader = new nodesConfig();
+    }
+}
+/// <summary>
+/// Configuartion class for the node loader, converting xml to opc nodes.
+/// </summary>
+public class nodesConfig{
+    /// <summary> XML file name where to get server node definitions </summary>
+    public string filename {get; set;}
+    public string targetIdentifier {get; set;}
+    public List<string> whiteList{get;set;}
+    public List<string> blackList{get;set;}
+    public List<string> contains{get;set;}
+    public List<string> matchRegEx{get;set;}
+
+
+    public nodesConfig(){
+        filename = "nodeset.xml";
+        targetIdentifier = "DisplayName";
+        whiteList = new List<string>();
+        blackList = new List<string>();
+        contains  = new List<string>();
+        matchRegEx  = new List<string>();
+    }
+}
+
+
+/// <summary>
+/// Class that applies node selection criteria
+/// </summary>
+public class NodesSelector:logged{
+    nodesConfig _config;
+    List<string> allowedTargets;
+    Boolean skipSelection;
+    public NodesSelector(nodesConfig config){
+        _config = config;
+        allowedTargets = new List<string>{"DisplayName","BrowseName"}; //,"DataType","Description"};
+        if(!allowedTargets.Contains(_config.targetIdentifier)) {
+            logger.Error("Target identifier {0} does not exist on UAVariable node", _config.targetIdentifier);
+            logger.Info("Possible target identifier are [{0}]",allowedTargets.ToString());
+            throw new System.ArgumentException("Target identifier");
+        }
+
+        skipSelection = false;
+        if( _config.whiteList.Count ==0 && 
+            _config.blackList.Count ==0 && 
+            _config.contains.Count == 0 && 
+            _config.matchRegEx.Count == 0 ) skipSelection = true;
+    }
+
+    /// <summary>
+    /// Selects the provided node against the selection rules in the node config. In case no rules are specified 
+    /// the default is to take all nodes.
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns>true if the node match any of the selection rules, false otherwise.</returns>
+    public Boolean selectNode(Opc.Ua.Export.UAVariable node){
+        if(skipSelection) return true;
+
+        string target = "";
+        if(_config.targetIdentifier == "DisplayName"){
+            if(node.DisplayName != null && node.DisplayName[0] != null) 
+                target = node.DisplayName[0].Value;
+        }
+        else target = node.BrowseName;
+
+        // checks 
+        if(_config.whiteList.Contains(target)) return true;
+        if(_config.blackList.Contains(target)) return false;
+
+        if(_config.contains.Find(x => target.Contains(x)) != null) return true;
+        
+        foreach (string pattern in _config.matchRegEx)
+        {   
+            Match m = Regex.Match(target, pattern, RegexOptions.IgnoreCase);
+            if(m.Success) return true;
+        }
+
+        return false;
+    }
+}
+
 }
