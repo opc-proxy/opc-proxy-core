@@ -30,6 +30,20 @@ nodesDatabase:{
     filename : "filename",  // name of file in case of storing in a file.
     overwrite : false      // decide if to override an existing nodes file or to load from it.
  },
+
+
+ // LOADING of nodes 
+ nodesLoader : {
+    filename : "nodeset.xml",           // XML file from which import the node set, Node2Set OPC specification.
+    targetIdentifier : "DisplayName",   // what node property to use to identify the node, [displayName,browseName,nodeId] (case insensitive)
+    
+    // nodes selection criterias
+    whiteList : [],         // nodes will be accepted if 'targetIdentifier' match one of string in the list
+    blackList : [],         // nodes will be discarder if 'targetIdentifier' match one of string in the list
+    contains :  [],         // nodes will be accepted if 'targetIdentifier' contains one of the string in list
+    notContain :[],         // nodes will be discarded if 'targetIdentifier' contains one of the string in list
+    matchRegEx :[],         // nodes will be accepted if 'targetIdentifier' match one of the regular expression in list
+ }
 }
 ```
 
