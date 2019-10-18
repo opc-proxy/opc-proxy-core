@@ -49,19 +49,19 @@ namespace Tests
         [Fact]
         public void ThrowOnlyBlackList(){
             
-            config.blackList = new List<string>{"bella","ciao"};
+            config.blackList = new string[] {"bella","ciao"};
             Assert.Throws<System.ArgumentException>(() => new NodesSelector(config)) ;
-            config.blackList = new List<string>();
-            config.notContain = new List<string>{"bella","ciao"};
+            config.blackList = null ;
+            config.notContain = new string[] {"bella","ciao"};
             Assert.Throws<System.ArgumentException>(() => new NodesSelector(config)) ;
 
         }
         [Fact]
         public void BlackListAndMatchAll(){
-            config.matchRegEx = new List<string>{"^"};
+            config.matchRegEx = new string[] {"^"};
             NodesSelector sel = new NodesSelector(config);
-            config.notContain = new List<string>{"bella","ciao"};
-            config.blackList = new List<string>{"lea","giorgio"};
+            config.notContain = new string[] {"bella","ciao"};
+            config.blackList = new string[] {"lea","giorgio"};
 
             Assert.True( sel.selectNode(node),"Blacklist + matchRegEx all not working");
             node.BrowseName = "";
@@ -73,7 +73,7 @@ namespace Tests
         }
         [Fact]
         public void RegEx(){
-            config.matchRegEx = new List<string>{"^obi","^OBI"};
+            config.matchRegEx = new string[] {"^obi","^OBI"};
             NodesSelector sel = new NodesSelector(config);
             node.BrowseName = "OBI ciao";
             Assert.True( sel.selectNode(node),"matchRegEx not working");
@@ -83,8 +83,8 @@ namespace Tests
 
         [Fact]
         public void WhiteListing(){
-            config.whiteList = new List<string>{"hola","pola"};
-            config.contains = new List<string>{"mubo","jumbo"};
+            config.whiteList = new string[] {"hola","pola"};
+            config.contains = new string[] {"mubo","jumbo"};
             NodesSelector sel = new NodesSelector(config);
             Assert.False( sel.selectNode(node),"Should fail");
             node.BrowseName = "Hola";
@@ -99,7 +99,7 @@ namespace Tests
         public void DisplayName()
         {
             config.targetIdentifier = "displayName";
-            config.whiteList = new List<string>{"ciao"};
+            config.whiteList = new string[] {"ciao"};
 
             Opc.Ua.Export.LocalizedText[] txt = {new Opc.Ua.Export.LocalizedText()};
             txt[0].Value = "bella";
@@ -117,7 +117,7 @@ namespace Tests
         public void NodeID()
         {
             config.targetIdentifier = "NodeId";
-            config.whiteList = new List<string>{"ciao"};
+            config.whiteList = new string[] {"ciao"};
             NodesSelector sel = new NodesSelector(config);
 
             Assert.False( sel.selectNode(node),"Empty nodeId should fail");
@@ -131,29 +131,24 @@ namespace Tests
         public void ListConfigFromJson()
         {
             JObject o = JObject.Parse(@"{
+                nodesLoader :{
                     targetIdentifier: 'nodeId',
+                    whiteList : ['ciao'],
+                    blackList : ['pippo'],
+                    contains  : ['kola']
+                }
             }");
-
-            //JArray a = (JArray)o["nodesLoader"]["whiteList"];
-            //List<string> s = a.ToObject<List<string>>();
-            exp s = o.ToObject<exp>();
-            //Console.WriteLine("list {0} {1}", s.whiteList[0], s.whiteList[1]);
-            Console.WriteLine("list {0} ", s.whiteList.Length);
-
+            config = o.ToObject<nodesConfigWrapper>().nodesLoader;
             NodesSelector sel = new NodesSelector(config);            
             node.NodeId = "paul";
             Assert.False( sel.selectNode(node),"Wrong nodeId should fail");
             node.NodeId = "ciao";
             Assert.True( sel.selectNode(node),"nodeId should pass");
+            node.NodeId = "pippo";
+            Assert.False( sel.selectNode(node),"blacklisted nodeId should fail");
+            node.NodeId = "hey kola";
+            Assert.True( sel.selectNode(node),"contained nodeId should pass");
         }
     }
 
-    public class exp{
-        public string[] whiteList {get;set;}
-        public string targetIdentifier {get; set;}
-
-        public exp(){
-            targetIdentifier = "";
-        }
-    }
 }
