@@ -266,19 +266,25 @@ namespace converter {
                 }
 
                 // assign user defined target name
-                if (_config.targetIdentifier == "DisplayName")
-                {
-                    if (xml_node.DisplayName != null && xml_node.DisplayName[0] != null)
-                        db_node.name = node.DisplayName[0].Value;
-                    else
-                    {
+                switch(_config.targetIdentifier.ToLower()){
+                    case "displayname":
+                        if (xml_node.DisplayName != null && xml_node.DisplayName[0] != null)
+                            db_node.name = node.DisplayName[0].Value;
+                        else
+                        {
                         logger.Error("Node: " + node.BrowseName + "  does not have DisplayName, using browseName instead");
                         db_node.name = node.BrowseName;
-                    }
-                }
-                else
-                {
-                    db_node.name = node.BrowseName;
+                        }
+                        break;
+                    case "browsename":
+                        db_node.name = node.BrowseName;
+                        break;
+                    case "nodeid":
+                        db_node.name = node.NodeId;
+                        break;
+                    default:
+                        logger.Debug("This should not happen, targetID = {0}",_config.targetIdentifier.ToLower());
+                        throw new Exception("targetID not allowed");
                 }
 
                 // Adding node to cache DB
@@ -347,6 +353,7 @@ public class nodesConfig{
     public List<string> whiteList{get;set;}
     public List<string> blackList{get;set;}
     public List<string> contains{get;set;}
+    public List<string> notContain{get;set;}
     public List<string> matchRegEx{get;set;}
 
 
@@ -356,6 +363,7 @@ public class nodesConfig{
         whiteList = new List<string>();
         blackList = new List<string>();
         contains  = new List<string>();
+        notContain  = new List<string>();
         matchRegEx  = new List<string>();
     }
 }
@@ -370,10 +378,10 @@ public class NodesSelector:logged{
     Boolean skipSelection;
     public NodesSelector(nodesConfig config){
         _config = config;
-        allowedTargets = new List<string>{"DisplayName","BrowseName"}; //,"DataType","Description"};
-        if(!allowedTargets.Contains(_config.targetIdentifier)) {
-            logger.Error("Target identifier {0} does not exist on UAVariable node", _config.targetIdentifier);
-            logger.Info("Possible target identifier are [{0}]",allowedTargets.ToString());
+        allowedTargets = new List<string>{"displayname","browsename","nodeid"}; 
+        if(!allowedTargets.Contains(_config.targetIdentifier.ToLower())) {
+            logger.Error("Target identifier '{0}' is not supported", _config.targetIdentifier);
+            logger.Info("Possible target identifier are [{0}] (case insensitive)",string.Join(",",allowedTargets));
             throw new System.ArgumentException("Target identifier");
         }
 
@@ -381,7 +389,20 @@ public class NodesSelector:logged{
         if( _config.whiteList.Count ==0 && 
             _config.blackList.Count ==0 && 
             _config.contains.Count == 0 && 
-            _config.matchRegEx.Count == 0 ) skipSelection = true;
+            _config.matchRegEx.Count == 0 &&
+            _config.notContain.Count ==0) skipSelection = true;
+        
+        if(_config.blackList.Count > 0 && 
+            _config.whiteList.Count ==0 && 
+            _config.contains.Count == 0 && 
+            _config.matchRegEx.Count == 0 ) 
+            throw new System.ArgumentException("Black list must be used with other lists, to obtain all nodes except backlisted add to configfile ->  matchRegEx : ['^'] ");
+                    
+        if(_config.notContain.Count > 0 && 
+            _config.whiteList.Count ==0 && 
+            _config.contains.Count == 0 && 
+            _config.matchRegEx.Count == 0 ) 
+            throw new System.ArgumentException("Black lists must be used with other lists, to obtain all nodes except backlisted add to configfile ->  matchRegEx : ['^'] ");
     }
 
     /// <summary>
@@ -394,17 +415,28 @@ public class NodesSelector:logged{
         if(skipSelection) return true;
 
         string target = "";
-        if(_config.targetIdentifier == "DisplayName"){
-            if(node.DisplayName != null && node.DisplayName[0] != null) 
-                target = node.DisplayName[0].Value;
+        switch(_config.targetIdentifier.ToLower()){
+            case "displayname":
+                if(node.DisplayName != null && node.DisplayName[0] != null) target = node.DisplayName[0].Value;
+                break;
+            case "browsename":
+                target = node.BrowseName; 
+                break;
+            case "nodeid":
+                target = node.NodeId;
+                break;
+            default:
+                logger.Debug("This should not happen, targetID = {0}",_config.targetIdentifier.ToLower());
+                target = "TheseAreNotTheDroidsYouAreLookingFor";
+                break;
         }
-        else target = node.BrowseName;
 
         // checks 
         if(_config.whiteList.Contains(target)) return true;
         if(_config.blackList.Contains(target)) return false;
 
         if(_config.contains.Find(x => target.Contains(x)) != null) return true;
+        if(_config.notContain.Find(x => target.Contains(x)) != null) return false;
         
         foreach (string pattern in _config.matchRegEx)
         {   
