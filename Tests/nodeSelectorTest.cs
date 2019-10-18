@@ -51,7 +51,7 @@ namespace Tests
             
             config.blackList = new string[] {"bella","ciao"};
             Assert.Throws<System.ArgumentException>(() => new NodesSelector(config)) ;
-            config.blackList = null ;
+            config.blackList = Array.Empty<string>() ;
             config.notContain = new string[] {"bella","ciao"};
             Assert.Throws<System.ArgumentException>(() => new NodesSelector(config)) ;
 
@@ -135,10 +135,12 @@ namespace Tests
                     targetIdentifier: 'nodeId',
                     whiteList : ['ciao'],
                     blackList : ['pippo'],
-                    contains  : ['kola']
+                    contains  : ['kola'],
+                    notContain :[]
                 }
             }");
             config = o.ToObject<nodesConfigWrapper>().nodesLoader;
+            Console.WriteLine("not contain {0}", config.notContain.Length  );
             NodesSelector sel = new NodesSelector(config);            
             node.NodeId = "paul";
             Assert.False( sel.selectNode(node),"Wrong nodeId should fail");
@@ -148,6 +150,8 @@ namespace Tests
             Assert.False( sel.selectNode(node),"blacklisted nodeId should fail");
             node.NodeId = "hey kola";
             Assert.True( sel.selectNode(node),"contained nodeId should pass");
+            Assert.True(config.notContain.Length == 0, "fail to initialize empty array");
+            Assert.True(config.matchRegEx.Length == 0, "fail to initialize empty array 2");
         }
     }
 

@@ -356,10 +356,15 @@ public class nodesConfig{
     public string[] notContain{get;set;}
     public string[] matchRegEx{get;set;}
 
-
     public nodesConfig(){
         filename = "nodeset.xml";
         targetIdentifier = "DisplayName";
+
+        whiteList = Array.Empty<string>();
+        blackList = Array.Empty<string>();
+        contains = Array.Empty<string>();
+        notContain = Array.Empty<string>();
+        matchRegEx = Array.Empty<string>();
     }
 }
 
@@ -381,22 +386,22 @@ public class NodesSelector:logged{
         }
 
         skipSelection = false;
-        if( _config.whiteList == null && 
-            _config.blackList == null && 
-            _config.contains  == null && 
-            _config.matchRegEx == null &&
-            _config.notContain ==null) skipSelection = true;
+        if( _config.whiteList.Length == 0 && 
+            _config.blackList.Length == 0 && 
+            _config.contains.Length == 0 && 
+            _config.matchRegEx.Length == 0 &&
+            _config.notContain.Length == 0) skipSelection = true;
         
-        if(_config.blackList != null && 
-            _config.whiteList == null && 
-            _config.contains == null && 
-            _config.matchRegEx == null ) 
+        if(_config.blackList.Length != 0 && 
+            _config.whiteList.Length == 0 && 
+            _config.contains.Length == 0 && 
+            _config.matchRegEx.Length == 0 ) 
             throw new System.ArgumentException("Black list must be used with other lists, to obtain all nodes except backlisted add to configfile ->  matchRegEx : ['^'] ");
                     
-        if(_config.notContain != null && 
-            _config.whiteList == null && 
-            _config.contains == null && 
-            _config.matchRegEx == null )
+        if(_config.notContain.Length != 0 && 
+            _config.whiteList.Length == 0 && 
+            _config.contains.Length == 0 && 
+            _config.matchRegEx.Length == 0 )
             throw new System.ArgumentException("Black lists must be used with other lists, to obtain all nodes except backlisted add to configfile ->  matchRegEx : ['^'] ");
     }
 
@@ -427,27 +432,20 @@ public class NodesSelector:logged{
         }
 
         // checks 
-        if(_config.whiteList != null && Array.IndexOf(_config.whiteList,target) > -1) return true;
-        if(_config.blackList !=null && Array.IndexOf(_config.blackList,target) > -1 ) return false;
+        if(Array.IndexOf(_config.whiteList,target) > -1) return true;
+        if(Array.IndexOf(_config.blackList,target) > -1 ) return false;
 
-        if(_config.contains != null){
-            foreach (string txt in _config.contains){
-                if(target.Contains(txt)) return true;
-            }
+        foreach (string txt in _config.contains){
+            if(target.Contains(txt)) return true;
         }
 
-        if(_config.notContain != null){
-            foreach (string txt in _config.notContain){
-                if(target.Contains(txt)) return false;
-            }
+        foreach (string txt in _config.notContain){
+            if(target.Contains(txt)) return false;
         }
-        
-        if(_config.matchRegEx != null ) {
-            foreach (string pattern in _config.matchRegEx)
-            {   
-                Match m = Regex.Match(target, pattern, RegexOptions.IgnoreCase);
-                if(m.Success) return true;
-            }
+
+        foreach (string pattern in _config.matchRegEx){   
+            Match m = Regex.Match(target, pattern, RegexOptions.IgnoreCase);
+            if(m.Success) return true;
         }
 
         return false;
