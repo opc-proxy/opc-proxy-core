@@ -38,14 +38,14 @@ namespace converter {
         string getNodeNamespace(string id){
             //logger.Debug("get namespace -> " + id );
 
-            UInt32 uri_index = Convert.ToUInt32((id.Split(";")[0]).Substring(3),10) - 1;
+            UInt32 uri_index = Convert.ToUInt32((id.Split(';')[0]).Substring(3),10) - 1;
 
             if(uri_index >=m_namespaceURIs.Length  ) 
                 logger.Debug("out of range -- " + id + "   index " + uri_index.ToString());
             return m_namespaceURIs[uri_index];
         }
         uint getNodeNamespaceIndex(string id){
-            UInt32 uri_index = Convert.ToUInt32((id.Split(";")[0]).Substring(3),10) - 1;
+            UInt32 uri_index = Convert.ToUInt32((id.Split(';')[0]).Substring(3),10) - 1;
             return uri_index;
         }
 
@@ -56,14 +56,14 @@ namespace converter {
             string id_str = "";
 
             // case of only identifier no name space
-            if(id.Split(";").Length == 1){
+            if(id.Split(';').Length == 1){
                 isNum = (id[0] == 'i');
                 id_str = id.Substring(2);
             }
             // case with namespace
             else {
-                isNum = (id.Split(";")[1][0] == 'i');
-                id_str = (id.Split(";")[1]).Substring(2);
+                isNum = (id.Split(';')[1][0] == 'i');
+                id_str = (id.Split(';')[1]).Substring(2);
             }
 
             object identifier = (isNum) ? ((object)Convert.ToUInt32(id_str,10) ): ((object)id_str);
@@ -74,12 +74,12 @@ namespace converter {
             
             string id_str = "";
             // case of only identifier no name space
-            if(id.Split(";").Length == 1){
+            if(id.Split(';').Length == 1){
                 id_str = id;
             }
             // case with namespace
             else {
-                id_str = (id.Split(";")[1]);
+                id_str = (id.Split(';')[1]);
             }
             return id_str;
         }
@@ -93,7 +93,7 @@ namespace converter {
                     logger.Debug("------ Matched with " + var.DataType );//+alias.Value.Substring(2));
 
                     // case of non built it dataType alias
-                    if(alias.Value.Split(";").Length > 1) {
+                    if(alias.Value.Split(';').Length > 1) {
                         return NodeId.Create(
                             getIdentifier(alias.Value),
                             getNodeNamespace(alias.Value),
@@ -126,7 +126,7 @@ namespace converter {
             foreach(NodeIdAlias alias in m_aliases) {
                 if(alias.Alias == var.DataType) {
                     // case of non built in dataType alias
-                    if(alias.Value.Split(";").Length > 1) {
+                    if(alias.Value.Split(';').Length > 1) {
                         NodeId n =  NodeId.Create(
                             getIdentifier(alias.Value),
                             getNodeNamespace(alias.Value),

@@ -143,7 +143,9 @@ namespace OpcProxyCore{
             
             foreach(var node in nodes_list){
                 serverNode s = new serverNode(node);
-                s.currentServerIndex = namespace_index_relation.GetValueOrDefault(node.internalIndex);
+                int temp = 0;
+                namespace_index_relation.TryGetValue(node.internalIndex,out temp);
+                s.currentServerIndex = temp;
                 s.serverIdentifier = "ns=" + s.currentServerIndex.ToString();
                 s.serverIdentifier += ";" + node.identifier;
 
