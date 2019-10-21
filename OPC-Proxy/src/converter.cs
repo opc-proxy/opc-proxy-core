@@ -283,7 +283,7 @@ namespace converter {
                         db_node.name = node.NodeId;
                         break;
                     default:
-                        logger.Debug("This should not happen, targetID = {0}",_config.targetIdentifier.ToLower());
+                        logger.Fatal("This should not happen, targetID = {0}",_config.targetIdentifier.ToLower());
                         throw new Exception("targetID not allowed");
                 }
 
@@ -380,7 +380,7 @@ public class NodesSelector:logged{
         _config = config;
         allowedTargets = new List<string>{"displayname","browsename","nodeid"}; 
         if(!allowedTargets.Contains(_config.targetIdentifier.ToLower())) {
-            logger.Error("Target identifier '{0}' is not supported", _config.targetIdentifier);
+            logger.Fatal("Target identifier '{0}' is not supported", _config.targetIdentifier);
             logger.Info("Possible target identifier are [{0}] (case insensitive)",string.Join(",",allowedTargets));
             throw new System.ArgumentException("Target identifier");
         }
