@@ -31,6 +31,7 @@ namespace OpcProxyClient
     public class MonItemNotificationArgs : EventArgs{
         public IList<DataValue> values {get; set;}
         public string name {get; set;}
+        public Type dataType {get; set;}
     }
 
     public class OPCclient : Managed
@@ -340,6 +341,12 @@ namespace OpcProxyClient
             MonItemNotificationArgs notification = new MonItemNotificationArgs();
             notification.values = item.DequeueValues();
             notification.name = item.DisplayName;
+            // Monitored Item does not return a data type since is general it can be used with nodes that are not variables.
+            // here we hit the memory DB to get the dataType
+            dbNode n = _serviceManager.db.getDbNode(item.DisplayName);
+            if(n!=null){
+                notification.dataType = Type.GetType(n.systemType);
+            }
             EventHandler<MonItemNotificationArgs> handler = MonitoredItemChanged; 
             if (handler != null)
             {

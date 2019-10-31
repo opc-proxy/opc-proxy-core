@@ -179,6 +179,15 @@ namespace OpcProxyCore{
         }
 
         /// <summary>
+        /// Returns the first dbNode from cache that matches the name, if no match returns null
+        /// </summary>
+        /// <param name="name">Name of the node to match</param>
+        /// <returns></returns>
+        public dbNode getDbNode(string name){
+            return nodes.FindOne(Query.EQ("name", name));
+        }
+
+        /// <summary>
         /// Update the cache with the new value of that variable
         /// </summary>
         /// <param name="name">name of variable</param>

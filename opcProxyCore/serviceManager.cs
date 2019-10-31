@@ -18,8 +18,8 @@ namespace OpcProxyCore{
     /// Takes care of initialization of all services and of setting up event handlers.
     /// </summary>
     public class serviceManager {
-        private cacheDB db;
-        private OPCclient opc;
+        public cacheDB db;
+        public OPCclient opc;
 
         private List<IOPCconnect> connector_list;
 
@@ -220,6 +220,7 @@ namespace OpcProxyCore{
             return opc.asyncWrite(s_node, value);
         }
 
+
     }
 
     public class logConfigWrapper{
@@ -236,7 +237,7 @@ namespace OpcProxyCore{
     }
 
     public class Managed : logged {
-        private serviceManager _serviceManager;
+        public serviceManager _serviceManager;
 
         public Managed(){
             _serviceManager = null;
