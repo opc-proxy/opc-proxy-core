@@ -26,6 +26,8 @@ namespace OpcProxyCore{
         private JObject _config;
         public static Logger logger = null;
         
+        public CancellationTokenSource cancellationToken;
+            
         public serviceManager(string[] args){
             
             string config_file_path = "proxy_config.json";
@@ -35,6 +37,13 @@ namespace OpcProxyCore{
                     config_file_path = args[k+1];
                 }                
             }
+
+            // setting up the cancellation Process
+            cancellationToken = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) => {
+                e.Cancel = true; // prevent the process from terminating.
+                cancellationToken.Cancel();
+            };
 
             string json = "";
             try 
@@ -73,6 +82,14 @@ namespace OpcProxyCore{
             browseNodesFillCache();
         }
         public serviceManager(JObject config){
+
+            // setting up the cancellation Process
+            cancellationToken = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) => {
+                e.Cancel = true; // prevent the process from terminating.
+                cancellationToken.Cancel();
+            };
+
             try{
                 _init_constructor(config);
             }
@@ -90,7 +107,7 @@ namespace OpcProxyCore{
         public void initConnectors(){
             foreach(var c in connector_list){
                 c.setServiceManager(this);
-                c.init(_config);
+                c.init(_config, cancellationToken);
             }
         }
 
@@ -280,6 +297,6 @@ namespace OpcProxyCore{
         /// Initialization. Everything that needs to be done for initializzation will be passed here.
         /// </summary>
         /// <param name="config">JSON configuration see Newtonsoft.Json for how to parse an object out of it</param>
-        void init(JObject config);
+        void init(JObject config, CancellationTokenSource cts);
     }
 }

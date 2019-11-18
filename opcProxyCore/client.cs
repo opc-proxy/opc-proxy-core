@@ -384,10 +384,16 @@ namespace OpcProxyClient
         /// <summary> This is a subscription parameter, time intervall [millisecond] at which the OPC server will send node values updates.</summary>
         public int publishingInterval {get; set;}
 
+        /// <summary>
+        /// Name of the OPC system that will be used to identify 
+        /// </summary>
+        public string opcSystemName {get; set;}
+
         public opcConfig(){
             endpointURL = "none";
             reconnectPeriod = 10;     
             publishingInterval = 1000;
+            opcSystemName = "OPC";
         }
     }
 
