@@ -40,10 +40,7 @@ namespace OpcProxyCore{
 
             // setting up the cancellation Process
             cancellationToken = new CancellationTokenSource();
-            Console.CancelKeyPress += (_, e) => {
-                e.Cancel = true; // prevent the process from terminating.
-                cancellationToken.Cancel();
-            };
+
 
             string json = "";
             try 
@@ -148,21 +145,48 @@ namespace OpcProxyCore{
         // FIXME: see this better clean up 
         // https://stackoverflow.com/questions/6546509/detect-when-console-application-is-closing-killed
         public void wait(){
-             ManualResetEvent quitEvent = new ManualResetEvent(false);
-            try
+            ManualResetEvent quitEvent = new ManualResetEvent(false);
+            
+            // First way of canceling, a CTRL+C signal from user
+            Console.CancelKeyPress += (sender, eArgs) =>
             {
-                Console.CancelKeyPress += (sender, eArgs) =>
-                {
-                    quitEvent.Set();
-                    eArgs.Cancel = true;
-                };
+                logger.Info("Received close event... Waiting for cleanup process");
+                // Set the canceling token true for all the thread that use it (in particular kafka)
+                cancellationToken.Cancel();
+                // avoid default process killing
+                eArgs.Cancel = true;
+            };
 
+            // Second way to cancel: any of the Connectors can set the cancel token
+            CancellationTokenRegistration registration = cancellationToken.Token.Register(()=>{
+                // wait for all thread canceling side effects to take place
+                Thread.Sleep(500);
+                // Run the remaining cleanup functions
+                quitEvent.Set();
+            });
+    
+            // wait for cancel event or Ctrl-C, this is blocking the main thread
+            using(registration){
+                quitEvent.WaitOne();
+                // call cleanup code
+                cleanUpAll();
             }
-            catch
-            {
+                  
+        }
+
+        public void cleanUpAll(){
+            opc.session.Close();
+            logger.Debug("OPC Session closed...");
+            foreach( var connector in connector_list){
+                try{
+                    connector.clean();
+                }
+                catch(Exception e){
+                    logger.Error("An error occurred while cleaning up: " + e.Message);
+                }
             }
-            // wait for timeout or Ctrl-C
-            quitEvent.WaitOne(-1);                       
+            logger.Debug("Connectors clean up completed...");
+            db.db.Dispose(); // this is probably not needed
         }
 
          /// <summary>
@@ -298,5 +322,10 @@ namespace OpcProxyCore{
         /// </summary>
         /// <param name="config">JSON configuration see Newtonsoft.Json for how to parse an object out of it</param>
         void init(JObject config, CancellationTokenSource cts);
+        
+        /// <summary>
+        /// Cleanup function to be called if there is any particular clean up to do to close the application gracefully
+        /// </summary>
+        void clean();
     }
 }

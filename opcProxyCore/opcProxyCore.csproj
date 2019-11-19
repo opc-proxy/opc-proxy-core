@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>opcProxy.core</PackageId>
-    <Version>0.0.2</Version>
+    <Version>0.0.3</Version>
     <Authors>Alessandro Manfredini</Authors>
     <Company>University of Zurich</Company>
   </PropertyGroup>
