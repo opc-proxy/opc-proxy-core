@@ -164,7 +164,11 @@ namespace OpcProxyCore{
                 // Run the remaining cleanup functions
                 quitEvent.Set();
             });
-    
+
+            // the registration to the cancel event is done after initialization of the connectors
+            // so it will not fire if it is canceled during init. Here we check for that.
+            if(cancellationToken.Token.IsCancellationRequested)  quitEvent.Set();
+
             // wait for cancel event or Ctrl-C, this is blocking the main thread
             using(registration){
                 quitEvent.WaitOne();
