@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
 using OpcProxyCore;
+using converter;
 
 namespace OpcProxyClient
 {
@@ -43,10 +44,12 @@ namespace OpcProxyClient
         static ExitCode exitCode;
 
         public event EventHandler<MonItemNotificationArgs> MonitoredItemChanged;
-
+        public NodesSelector node_selector;
         public OPCclient(JObject config) 
         {
             user_config = config.ToObject<opcConfig>();
+            var sel_config = config.ToObject<nodesConfig>();
+            node_selector = new NodesSelector(sel_config);
         }
 
 
@@ -83,6 +86,11 @@ namespace OpcProxyClient
 
             // load the application configuration.
             ApplicationConfiguration config = await application.LoadApplicationConfiguration(false);
+
+            if(config == null) {
+                logger.Error("Probably missing file 'Opc.Ua.SampleClient.Config.xml'");
+                throw new Exception("Application configuration is empty");
+            }
 
             // check the application certificate.
             bool haveAppCertificate = await application.CheckApplicationInstanceCertificate(false, 0);
@@ -122,6 +130,115 @@ namespace OpcProxyClient
             session.KeepAlive += Client_KeepAlive;
         }
 
+        public List<dbNode> surf(){
+            logger.Info("Surfing recursively trough server tree....");
+            exitCode = ExitCode.ErrorBrowseNamespace;
+            ReferenceDescriptionCollection references;
+            Byte[] continuationPoint;
+            Queue<NodeId> node_list = new Queue<NodeId>();
+            
+            node_list.Enqueue(ObjectIds.ObjectsFolder);
+            
+            logger.Debug(" DisplayName, BrowseName, NodeClass");
+
+            ReadValueIdCollection nodes_to_read = new ReadValueIdCollection();
+            ReadValueIdCollection ranks_to_read = new ReadValueIdCollection();
+            List<String> node_names = new List<string>();
+
+            while(node_list.Count > 0){
+
+                var temp_node = node_list.Dequeue();
+
+                session.Browse(
+                    null,
+                    null,
+                    temp_node,
+                    0u,
+                    BrowseDirection.Forward,
+                    ReferenceTypeIds.HierarchicalReferences,
+                    true,
+                    (uint)NodeClass.Variable | (uint)NodeClass.Object ,
+                    out continuationPoint,
+                    out references
+                );
+                
+                foreach (var rd in references) {
+                    node_list.Enqueue(ExpandedNodeId.ToNodeId(rd.NodeId, session.NamespaceUris));
+                    // Adding the node to list if pass user selections
+                    if(rd.NodeClass == NodeClass.Variable && node_selector.selectNode(rd)){
+                        nodes_to_read.Add(new ReadValueId{ 
+                            NodeId = ExpandedNodeId.ToNodeId(rd.NodeId, session.NamespaceUris), 
+                            AttributeId = Attributes.DataType
+                        });
+                        ranks_to_read.Add(new ReadValueId{ 
+                            NodeId = ExpandedNodeId.ToNodeId(rd.NodeId, session.NamespaceUris), 
+                            AttributeId = Attributes.ValueRank
+                        });
+                        node_names.Add( node_selector.getNameFromReference(rd));
+                    }
+                }
+                while( continuationPoint != null ) {
+                    Byte[] revCP;
+                    session.BrowseNext(null, false, continuationPoint,out revCP,out references);
+                    foreach (var rd in references) {
+                        node_list.Enqueue(ExpandedNodeId.ToNodeId(rd.NodeId, session.NamespaceUris));
+                        // Adding the node to list if pass user selections
+                        if(rd.NodeClass == NodeClass.Variable && node_selector.selectNode(rd)){
+                            nodes_to_read.Add(new ReadValueId{ 
+                                NodeId = ExpandedNodeId.ToNodeId(rd.NodeId, session.NamespaceUris), 
+                                AttributeId = Attributes.DataType
+                            });
+                            ranks_to_read.Add(new ReadValueId{ 
+                                NodeId = ExpandedNodeId.ToNodeId(rd.NodeId, session.NamespaceUris), 
+                                AttributeId = Attributes.ValueRank
+                            });
+                            node_names.Add( node_selector.getNameFromReference(rd));
+                        }
+                    }
+                    continuationPoint = revCP;
+                }
+            }
+
+            logger.Debug("Retriving data types of the selected nodes...");
+            DataValueCollection data_types;
+            DataValueCollection ranks;
+            DiagnosticInfoCollection di;
+            session.Read(null,0.0, TimestampsToReturn.Neither, nodes_to_read,out data_types, out di);
+            session.Read(null,0.0, TimestampsToReturn.Neither, ranks_to_read,out ranks, out di);
+            
+            List<dbNode> return_nodes = new List<dbNode>();
+            for(int i=0; i< nodes_to_read.Count; i++){
+                
+                dbNode temp_dbNode = new dbNode();
+                if(nodes_to_read[i].NodeId.IdType == IdType.String)
+                    temp_dbNode.identifier = "s=" + nodes_to_read[i].NodeId.Identifier.ToString();
+                else if(nodes_to_read[i].NodeId.IdType == IdType.Numeric){
+                    temp_dbNode.identifier = "i=" + nodes_to_read[i].NodeId.Identifier.ToString();
+                }
+                else continue;
+
+                temp_dbNode.name = node_names[i];
+                // namespace index is equal to namespace uri table indexes
+                temp_dbNode.internalIndex  = nodes_to_read[i].NodeId.NamespaceIndex;
+                BuiltInType b = TypeInfo.GetBuiltInType( (NodeId)data_types[i].Value ) ;
+                temp_dbNode.systemType = TypeInfo.GetSystemType(b, (Int32)ranks[i].Value).ToString();
+
+                // skip if not builtIn value
+                if (!temp_dbNode.systemType.StartsWith("System") || temp_dbNode.systemType.ToLower() == "null"){
+                    logger.Error("type '"+temp_dbNode.systemType +"' not supported for node: '"+ temp_dbNode.name +"'");
+                    continue;
+                }
+                if((Int32)ranks[i].Value > 1) {
+                    logger.Error("Arrays are not supported. node: '"+ temp_dbNode.name +"'");
+                    continue;
+                }
+
+                return_nodes.Add(temp_dbNode);
+                logger.Debug( "Adding Node " + temp_dbNode.name  + "  of type " + temp_dbNode.systemType);
+            }
+
+            return return_nodes;
+        }
         public void crowl(){
             logger.Info("4 - Browse the OPC UA server namespace.");
             exitCode = ExitCode.ErrorBrowseNamespace;
@@ -146,7 +263,8 @@ namespace OpcProxyClient
             
             foreach (var rd in references)
             { 
-                logger.Info( rd.NodeId.NamespaceUri);
+                logger.Info( " {0}, {1}, {2} ", rd.DisplayName, rd.BrowseName, rd.NodeClass);
+
                 ReferenceDescriptionCollection nextRefs;
                 byte[] nextCp;
                 session.Browse(
@@ -164,7 +282,7 @@ namespace OpcProxyClient
                 Dictionary <string, Dictionary<string, VariableNode>> p = new Dictionary<string, Dictionary<string, VariableNode>>();
                 foreach (var nextRd in nextRefs)
                 {
-                    logger.Info( "   + {0}, {1}, {2} ", nextRd.NodeId.NamespaceUri, nextRd.NodeId.ToString(), nextRd.NodeId.Identifier.ToString());
+                    logger.Info( "   + {0}, {1}, {2} ", nextRd.DisplayName, nextRd.BrowseName, nextRd.NodeClass);
 
                 }
             }

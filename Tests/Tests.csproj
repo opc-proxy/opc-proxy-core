@@ -17,6 +17,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="nodeset.xml"  CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="proxy_config.json"  CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Opc.Ua.SampleClient.Config.xml"  CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

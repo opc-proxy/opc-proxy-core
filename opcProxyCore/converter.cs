@@ -430,6 +430,46 @@ public class NodesSelector:logged{
                 target = "TheseAreNotTheDroidsYouAreLookingFor";
                 break;
         }
+        return selectNode(target);
+    }
+    /// <summary>
+    /// Selects the provided node against the selection rules in the node config. In case no rules are specified 
+    /// the default is to take all nodes.
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns>true if the node match any of the selection rules, false otherwise.</returns>
+    public Boolean selectNode(ReferenceDescription node){
+        if(skipSelection) return true;
+        string target = getNameFromReference(node);
+        return selectNode(target);
+    }
+    public string getNameFromReference(ReferenceDescription node){
+        string target = "";
+        switch(_config.targetIdentifier.ToLower()){
+            case "displayname":
+                if(node.DisplayName != null) target = node.DisplayName.Text;
+                break;
+            case "browsename":
+                target = node.BrowseName.Name; 
+                break;
+            case "nodeid":
+                target = node.NodeId.Identifier.ToString();
+                break;
+            default:
+                logger.Debug("This should not happen, targetID = {0}",_config.targetIdentifier.ToLower());
+                target = "TheseAreNotTheDroidsYouAreLookingFor";
+                break;
+        }
+        return target;
+    }
+    
+    /// <summary>
+    /// Selects the provided string against the selection rules in the node config. In case no rules are specified 
+    /// the default is to take all nodes.
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns>true if the node match any of the selection rules, false otherwise.</returns>
+    public Boolean selectNode(string target){
 
         // checks 
         if(Array.IndexOf(_config.whiteList,target) > -1) return true;
@@ -450,6 +490,7 @@ public class NodesSelector:logged{
 
         return false;
     }
+
 }
 
 }

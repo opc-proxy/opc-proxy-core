@@ -103,6 +103,26 @@ namespace OpcProxyCore{
         }
 
 
+        public void insertNamespaces(NamespaceTable sessionNamespaceURI){
+
+            string[] namespaces_from_table = sessionNamespaceURI.ToArray();
+            for(int k=0; k< sessionNamespaceURI.Count; k++){
+                dbNamespace ns = new dbNamespace {
+                    internalIndex = k,
+                    URI = namespaces_from_table[k],
+                    currentServerIndex = k
+                };
+                namespaces.Insert(ns);
+            }
+        }
+
+        public void insertNodes(List<dbNode> input_nodes){
+            foreach (var node in input_nodes)
+            {
+                nodes.Insert(node);
+            }
+        }
+
         /// <summary>
         /// Assign to previously loaded namespaces the current local index in the server
         /// </summary>

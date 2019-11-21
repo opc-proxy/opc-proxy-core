@@ -65,7 +65,6 @@ namespace OpcProxyCore{
             _config = config;
             init_logging(config.ToObject<logConfigWrapper>().loggerConfig);
             logger = LogManager.GetLogger(this.GetType().Name);
-
             opc = new OPCclient(config);
             db = new cacheDB(config);
 
@@ -75,7 +74,9 @@ namespace OpcProxyCore{
             opc.setPointerToManager(this);
             db.setPointerToManager(this);
 
+
             connectOpcClient();
+
             browseNodesFillCache();
         }
         public serviceManager(JObject config){
@@ -179,7 +180,7 @@ namespace OpcProxyCore{
         }
 
         public void cleanUpAll(){
-            opc.session.Close();
+            if(opc.session != null) opc.session.Close();
             logger.Debug("OPC Session closed...");
             foreach( var connector in connector_list){
                 try{
@@ -239,8 +240,14 @@ namespace OpcProxyCore{
 
         public void browseNodesFillCache(){
             
-            UANodeConverter ua = new UANodeConverter(_config, opc.session.NamespaceUris);
-            ua.fillCacheDB(db);
+            // filling nodes from XML nodes list   
+            //UANodeConverter ua = new UANodeConverter(_config, opc.session.NamespaceUris);
+            //ua.fillCacheDB(db);
+
+            // filling nodes via browse feature
+            db.insertNamespaces(opc.session.NamespaceUris);
+            db.insertNodes(opc.surf());
+
         }
 
         /// <summary>
