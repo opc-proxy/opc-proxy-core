@@ -151,7 +151,7 @@ namespace OpcProxyCore{
             // Second way to cancel: any of the Connectors can set the cancel token
             CancellationTokenRegistration registration = cancellationToken.Token.Register(()=>{
                 // wait for all thread canceling side effects to take place
-                Thread.Sleep(200);
+                Thread.Sleep(100);
                 // Run the remaining cleanup functions
                 quitEvent.Set();
             });
@@ -159,9 +159,8 @@ namespace OpcProxyCore{
             // Third way to cancel: Unix SIGTERM
              AppDomain.CurrentDomain.ProcessExit += (s, e) => 
             {
-                Console.WriteLine("Received close event... Waiting for cleanup process");
+                Console.WriteLine("Received SIGTERM...");
                 cancellationToken.Cancel();
-                quitEvent.Set();
                 Task t = new TaskFactory().StartNew(()=>{
                     // wait 2 sec before force quitting
                     Thread.Sleep(2000);
