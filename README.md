@@ -36,6 +36,7 @@ nodesDatabase:{
  nodesLoader : {
     filename : "nodeset.xml",           // XML file from which import the node set, Node2Set OPC specification.
     targetIdentifier : "DisplayName",   // what node property to use to identify the node, [displayName,browseName,nodeId] (case insensitive)
+    browseNodes : true,   // if false use the XML file provided to load nodes, otherwise discover nodes via browsing the server (WARNING: network intensive, do not use in production)
     
     // nodes selection criterias
     whiteList : [],         // nodes will be accepted if 'targetIdentifier' match one of string in the list
