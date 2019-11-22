@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System;
 using System.Threading;
 using System.IO;
-using System.Timers;
 
 namespace OpcProxyCore{
 
@@ -130,10 +129,9 @@ namespace OpcProxyCore{
         }
 
         /// <summary>
-        /// Wait for a cancel event Ctrl-C key press. In future maybe add a better way to clean up before closing.
+        /// Wait for a cancel/kill event. Supports Ctrl-C key press, Unix SIGTERM and cancel from any Connectors via cancellationToken.
+        /// Insure proper cleanup after a cancel/kill event. 
         /// </summary>
-        // FIXME: see this better clean up 
-        // https://stackoverflow.com/questions/6546509/detect-when-console-application-is-closing-killed
         public void wait(){
             ManualResetEvent quitEvent = new ManualResetEvent(false);
             ManualResetEvent sigTerm = new ManualResetEvent(false);
@@ -162,7 +160,7 @@ namespace OpcProxyCore{
                 Console.WriteLine("Received SIGTERM...");
                 cancellationToken.Cancel();
                 Task t = new TaskFactory().StartNew(()=>{
-                    // wait 2 sec before force quitting
+                    // wait 2 sec, force quitting if cleanup not already finished by then 
                     Thread.Sleep(2000);
                     sigTerm.Set();
                 });
