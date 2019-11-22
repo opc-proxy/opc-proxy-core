@@ -32,7 +32,7 @@ namespace Tests{
             var s = new serviceManager(j);
             Thread t = new Thread(()=>{
                 Thread.Sleep(5000);
-                s.cancellationToken.Cancel();
+//                s.cancellationToken.Cancel();
             });
             t.Start();
             s.run();

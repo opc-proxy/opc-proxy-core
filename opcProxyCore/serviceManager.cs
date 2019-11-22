@@ -28,20 +28,14 @@ namespace OpcProxyCore{
         
         public CancellationTokenSource cancellationToken;
             
-        public serviceManager(string[] args){
-            
+        public serviceManager(string[] args){       
             string config_file_path = "proxy_config.json";
-            
+
             for(int k=0; k < args.Length; k++)  {
                 if(args[k] == "--config" && args.Length > k+1) {
                     config_file_path = args[k+1];
                 }                
             }
-
-            // setting up the cancellation Process
-            cancellationToken = new CancellationTokenSource();
-
-
             string json = "";
             try 
             {
@@ -49,7 +43,7 @@ namespace OpcProxyCore{
                 {
                     json = sr.ReadToEnd();
                     JObject config = JObject.Parse(json);
-                    _init_constructor(config);
+                    _constructor(config);
                 }
             }
             catch (Exception e) 
@@ -67,26 +61,22 @@ namespace OpcProxyCore{
             logger = LogManager.GetLogger(this.GetType().Name);
             opc = new OPCclient(config);
             db = new cacheDB(config);
-
             connector_list = new List<IOPCconnect>{};
 
             // setting up the comunication line back to the manager
             opc.setPointerToManager(this);
             db.setPointerToManager(this);
-
-
             connectOpcClient();
-
             browseNodesFillCache();
         }
-        public serviceManager(JObject config){
 
+        public serviceManager(JObject config){
+            _constructor(config);
+        }
+        
+        private void _constructor(JObject config){
             // setting up the cancellation Process
             cancellationToken = new CancellationTokenSource();
-            Console.CancelKeyPress += (_, e) => {
-                e.Cancel = true; // prevent the process from terminating.
-                cancellationToken.Cancel();
-            };
 
             try{
                 _init_constructor(config);
@@ -96,9 +86,8 @@ namespace OpcProxyCore{
                 Console.WriteLine(e.Message);
                 System.Environment.Exit(0); 
             }
-            
         }
-        
+
         public void addConnector(IOPCconnect connector){
             connector_list.Add(connector);
         }
@@ -161,10 +150,20 @@ namespace OpcProxyCore{
             // Second way to cancel: any of the Connectors can set the cancel token
             CancellationTokenRegistration registration = cancellationToken.Token.Register(()=>{
                 // wait for all thread canceling side effects to take place
-                Thread.Sleep(500);
+                Thread.Sleep(200);
                 // Run the remaining cleanup functions
                 quitEvent.Set();
             });
+
+            // Third way to cancel: Unix SIGTERM
+             AppDomain.CurrentDomain.ProcessExit += (s, e) => 
+            {
+                Console.WriteLine("Received close event... Waiting for cleanup process");
+                cancellationToken.Cancel();
+                quitEvent.Set();
+                // somehow this is needed, wait for 1 sec that all is cleaned
+                Thread.Sleep(1000);
+            };
 
             // the registration to the cancel event is done after initialization of the connectors
             // so it will not fire if it is canceled during init. Here we check for that.
@@ -181,16 +180,16 @@ namespace OpcProxyCore{
 
         public void cleanUpAll(){
             if(opc.session != null) opc.session.Close();
-            logger.Debug("OPC Session closed...");
+            Console.WriteLine("OPC Session closed...");
             foreach( var connector in connector_list){
                 try{
                     connector.clean();
                 }
                 catch(Exception e){
-                    logger.Error("An error occurred while cleaning up: " + e.Message);
+                    Console.WriteLine("An error occurred while cleaning up: " + e.Message);
                 }
             }
-            logger.Debug("Connectors clean up completed...");
+            Console.WriteLine("Connectors clean up completed...");
             db.db.Dispose(); // this is probably not needed
         }
 
