@@ -136,6 +136,7 @@ namespace OpcProxyCore{
         // https://stackoverflow.com/questions/6546509/detect-when-console-application-is-closing-killed
         public void wait(){
             ManualResetEvent quitEvent = new ManualResetEvent(false);
+            ManualResetEvent sigTerm = new ManualResetEvent(false);
             
             // First way of canceling, a CTRL+C signal from user
             Console.CancelKeyPress += (sender, eArgs) =>
@@ -161,8 +162,13 @@ namespace OpcProxyCore{
                 Console.WriteLine("Received close event... Waiting for cleanup process");
                 cancellationToken.Cancel();
                 quitEvent.Set();
-                // somehow this is needed, wait for 1 sec that all is cleaned
-                Thread.Sleep(1000);
+                Task t = new TaskFactory().StartNew(()=>{
+                    // wait 2 sec before force quitting
+                    Thread.Sleep(2000);
+                    sigTerm.Set();
+                });
+
+                sigTerm.WaitOne();
             };
 
             // the registration to the cancel event is done after initialization of the connectors
@@ -174,6 +180,7 @@ namespace OpcProxyCore{
                 quitEvent.WaitOne();
                 // call cleanup code
                 cleanUpAll();
+                sigTerm.Set();
             }
                   
         }
