@@ -288,7 +288,7 @@ namespace converter {
                 }
 
                 // Adding node to cache DB
-                db.nodes.Insert(db_node);
+                db.insertNodeIfNotExist(db_node);
 
 
             }
@@ -349,6 +349,7 @@ public class nodesConfigWrapper{
 public class nodesConfig{
     /// <summary> XML file name where to get server node definitions </summary>
     public string filename {get; set;}
+    public bool browseNodes {get; set;}
     public string targetIdentifier {get; set;}
     public string[] whiteList{get;set;}
     public string[] blackList{get;set;}
@@ -359,7 +360,7 @@ public class nodesConfig{
     public nodesConfig(){
         filename = "nodeset.xml";
         targetIdentifier = "DisplayName";
-
+        browseNodes = true;
         whiteList = Array.Empty<string>();
         blackList = Array.Empty<string>();
         contains = Array.Empty<string>();

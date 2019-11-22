@@ -48,8 +48,8 @@ namespace OpcProxyClient
         public OPCclient(JObject config) 
         {
             user_config = config.ToObject<opcConfig>();
-            var sel_config = config.ToObject<nodesConfig>();
-            node_selector = new NodesSelector(sel_config);
+            var sel_config = config.ToObject<nodesConfigWrapper>();
+            node_selector = new NodesSelector(sel_config.nodesLoader);
         }
 
 

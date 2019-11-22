@@ -240,13 +240,19 @@ namespace OpcProxyCore{
 
         public void browseNodesFillCache(){
             
+            bool browseNodes = _config.ToObject<nodesConfigWrapper>().nodesLoader.browseNodes;
             // filling nodes from XML nodes list   
-            //UANodeConverter ua = new UANodeConverter(_config, opc.session.NamespaceUris);
-            //ua.fillCacheDB(db);
-
-            // filling nodes via browse feature
-            db.insertNamespaces(opc.session.NamespaceUris);
-            db.insertNodes(opc.surf());
+            if(browseNodes == false){
+                logger.Info("Loading nodes from XML File...");
+                UANodeConverter ua = new UANodeConverter(_config, opc.session.NamespaceUris);
+                ua.fillCacheDB(db);
+            }
+            else {
+                // filling nodes via browse feature
+                logger.Info("Loading nodes via browsing the OPC server...");
+                db.insertNamespacesIfNotExist(opc.session.NamespaceUris);
+                db.insertNodeIfNotExist(opc.surf());
+            }
 
         }
 

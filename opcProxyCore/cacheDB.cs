@@ -103,7 +103,7 @@ namespace OpcProxyCore{
         }
 
 
-        public void insertNamespaces(NamespaceTable sessionNamespaceURI){
+        public void insertNamespacesIfNotExist(NamespaceTable sessionNamespaceURI){
 
             string[] namespaces_from_table = sessionNamespaceURI.ToArray();
             for(int k=0; k< sessionNamespaceURI.Count; k++){
@@ -112,14 +112,24 @@ namespace OpcProxyCore{
                     URI = namespaces_from_table[k],
                     currentServerIndex = k
                 };
-                namespaces.Insert(ns);
+                var ns_existing = namespaces.FindOne(Query.EQ("URI", ns.URI));
+                if(ns_existing == null){
+                    namespaces.Insert(ns);
+                }
             }
         }
 
-        public void insertNodes(List<dbNode> input_nodes){
+        public void insertNodeIfNotExist(List<dbNode> input_nodes){
             foreach (var node in input_nodes)
             {
-                nodes.Insert(node);
+                insertNodeIfNotExist(node);
+            }
+        }
+
+        public void insertNodeIfNotExist(dbNode input_node){
+            var node_existing = nodes.FindOne(Query.EQ("name", input_node.name));
+            if(node_existing == null){
+                nodes.Insert(input_node);
             }
         }
 

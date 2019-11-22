@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Xunit;
 using OpcProxyClient;
 using Newtonsoft.Json;
@@ -23,11 +24,17 @@ namespace Tests{
                     'loglevel' :'debug'
                 },
                 'nodesLoader' :{
-                    'whiteList':['ciao']
+                    'whiteList':['ciao'],
+                    'browseNodes':false
                 }
             }";
             var j = JObject.Parse(json_config);
             var s = new serviceManager(j);
+            Thread t = new Thread(()=>{
+                Thread.Sleep(5000);
+                s.cancellationToken.Cancel();
+            });
+            t.Start();
             s.run();
         }
     }
