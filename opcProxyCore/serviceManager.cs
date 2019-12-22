@@ -281,7 +281,9 @@ namespace OpcProxyCore{
             return opc.asyncWrite(s_node, value);
         }
 
-
+        public JObject getRawConfig(){
+            return _config;
+        }
     }
 
     public class logConfigWrapper{
