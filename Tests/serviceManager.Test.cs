@@ -13,26 +13,28 @@ namespace Tests{
         {
             string json_config = @"
             {
-                'endpointURL':'opc.tcp://xeplc.physik.uzh.ch:4840/s7OPC',
+    		'opcServerURL':'opc.tcp://localhost:4334/UA/MyLittleServer',
                 'reconnectPeriod':10,
                 'publishingInterval': 1000,
 
                 'nodesDatabase':{
                     'isInMemory':true
                 },
-                'loggerConfig' :{
-                    'loglevel' :'debug'
-                },
-                'nodesLoader' :{
-                    'whiteList':['ciao'],
-                    'browseNodes':false
-                }
+		 'loggerConfig' :{
+        		'loglevel' :'debug'
+    		},
+
+	       'nodesLoader' : {
+        	'targetIdentifier' : 'browseName',
+        	'whiteList':['MyVariable1']
+    		}
+		    
             }";
             var j = JObject.Parse(json_config);
             var s = new serviceManager(j);
             Thread t = new Thread(()=>{
                 Thread.Sleep(5000);
-//                s.cancellationToken.Cancel();
+                s.cancellationToken.Cancel();
             });
             t.Start();
             s.run();

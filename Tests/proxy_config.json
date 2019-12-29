@@ -1,5 +1,5 @@
 {
-    "endpointURL":"opc.tcp://xeplc.physik.uzh.ch:4840/s7OPC",
+    "opcServerURL":"opc.tcp://localhost:4334/UA/MyLittleServer",
     "reconnectPeriod":10,
     "publishingInterval": 1000,
 
@@ -10,7 +10,8 @@
         "loglevel" :"debug"
     },
     "nodesLoader" :{
-        "whiteList":["ciao"]
+	"targetIdentifier" : "browseName", 
+        "whiteList":["MyVariable1"]
     }
 
 }

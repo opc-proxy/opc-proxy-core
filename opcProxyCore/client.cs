@@ -114,9 +114,9 @@ namespace OpcProxyClient
                 logger.Warn("missing application certificate, using unsecure connection.");
             }
 
-            logger.Info("Discover endpoints of {0}.", user_config.endpointURL);
+            logger.Info("Discover endpoints of {0}.", user_config.opcServerURL);
             exitCode = ExitCode.ErrorDiscoverEndpoints;
-            var selectedEndpoint = CoreClientUtils.SelectEndpoint(user_config.endpointURL, haveAppCertificate, 15000);
+            var selectedEndpoint = CoreClientUtils.SelectEndpoint(user_config.opcServerURL, haveAppCertificate, 15000);
             logger.Info("    Selected endpoint uses: {0}",
                 selectedEndpoint.SecurityPolicyUri.Substring(selectedEndpoint.SecurityPolicyUri.LastIndexOf('#') + 1));
 
@@ -494,7 +494,7 @@ namespace OpcProxyClient
 /// </summary>
     public class opcConfig{
         /// <summary> OPC server TCP URL endpoint</summary>
-        public  string  endpointURL { get; set; }
+        public  string  opcServerURL { get; set; }
 
         /// <summary> Time interval [seconds] to wait before retry to reconnect to OPC server</summary>
         public int reconnectPeriod {get; set;}
@@ -508,7 +508,7 @@ namespace OpcProxyClient
         public string opcSystemName {get; set;}
 
         public opcConfig(){
-            endpointURL = "none";
+            opcServerURL = "none";
             reconnectPeriod = 10;     
             publishingInterval = 1000;
             opcSystemName = "OPC";
