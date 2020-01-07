@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-
+using NLog;
 using Newtonsoft.Json.Linq;
 
 using OpcProxyCore;
@@ -45,11 +45,13 @@ namespace OpcProxyClient
 
         public event EventHandler<MonItemNotificationArgs> MonitoredItemChanged;
         public NodesSelector node_selector;
+        public static Logger logger = null;
         public OPCclient(JObject config) 
         {
             user_config = config.ToObject<opcConfig>();
             var sel_config = config.ToObject<nodesConfigWrapper>();
             node_selector = new NodesSelector(sel_config.nodesLoader);
+            logger = LogManager.GetLogger(this.GetType().Name);
         }
 
 
@@ -61,8 +63,10 @@ namespace OpcProxyClient
             }
             catch (Exception ex)
             {
-                Utils.Trace("ServiceResultException:" + ex.Message);
-                logger.Error("Exception", ex.Message);
+                // Utils.Trace("ServiceResultException:" + ex.Message);
+                logger.Error("Failed to connect to server at URL: " + user_config.opcServerURL);
+                logger.Error("Exception: " + ex.Message);
+                System.Environment.Exit(0); 
                 return;
             }
 
@@ -312,6 +316,7 @@ namespace OpcProxyClient
             valueToWrite.AttributeId = Attributes.Value;
             try {
                 valueToWrite.Value.Value = Convert.ChangeType( value, Type.GetType( node.systemType ));
+                valueToWrite.Value.SourceTimestamp = DateTime.Now;
             }
             catch (Exception e){
                 logger.Error(e, "Error during conversion of node value");

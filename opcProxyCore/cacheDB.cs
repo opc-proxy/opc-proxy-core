@@ -6,6 +6,7 @@ using System.IO;
 using LiteDB;
 using Newtonsoft.Json.Linq;
 using Opc.Ua ;
+using NLog;
 using OpcProxyClient ;
 
 namespace OpcProxyCore{
@@ -31,6 +32,7 @@ namespace OpcProxyCore{
         public LiteCollection<dbVariableValue> latestValues {get; set;}
         public LiteCollection<dbVariableValue> bufferValues {get; set;}
         //bool disposed = false;
+        public static NLog.Logger logger = null;
 
         dbConfig _config = null;
 
@@ -47,6 +49,7 @@ namespace OpcProxyCore{
         /// </para>
         public cacheDB( JObject config ){
             _config = config.ToObject<dbConfigWrapper>().nodesDatabase;
+            logger = LogManager.GetLogger(this.GetType().Name);
             init();
         }
 
@@ -68,9 +71,17 @@ namespace OpcProxyCore{
         }
 
         private void init(){
-            mem = new MemoryStream();
+            try{
+                mem = new MemoryStream();
 
-            db = (_config.isInMemory) ? new LiteDatabase(mem) : new LiteDatabase(@_config.filename) ;
+                db = (_config.isInMemory) ? new LiteDatabase(mem) : new LiteDatabase(@_config.filename) ;   
+            }
+            catch(Exception ex){
+                logger.Error("Failed to establish Cache database");
+                logger.Error("Exception: " + ex.Message);
+                System.Environment.Exit(0); 
+                return;
+            }
             
             createCollections();
         }

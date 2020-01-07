@@ -299,7 +299,7 @@ namespace OpcProxyCore{
         }
     }
 
-    public class Managed : logged {
+    public class Managed {
         public serviceManager _serviceManager;
 
         public Managed(){
