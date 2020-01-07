@@ -10,7 +10,7 @@
     <Title>OPC-Proxy Core Library</Title>
     <ProjectURL>https://opc-proxy.readthedocs.io/en/latest/intro.html</ProjectURL>
     <PackageDescription>
-	    The OPC-Proxy allows to build and deploy a customized IoT gateway to connect any OPC server with your network of microservices or cloud. This library is suitable for monitoring and control of devices, while tipically vendors of IoT gateways only offer monitoring. We focused on defining a protocol for bidirectional communication exposing the user to a simple API, so that one can read, but also write values to the OPC server without knowing details about OPC.
+	    The OPC-Proxy allows to build and deploy a customized IoT gateway to connect any OPC server with your network of microservices or cloud. This library is suitable for monitoring and control of devices. We focused on defining a protocol for bidirectional communication exposing the user to a simple API, so that one can read, but also write values to the OPC server without knowing details about OPC.
 	    **Documentation at:** https://opc-proxy.readthedocs.io/en/latest/intro.html
     </PackageDescription>
   </PropertyGroup>
