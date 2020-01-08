@@ -20,4 +20,4 @@ communication exposing the user to a simple API, so that one can read, but also 
 
 # Documentation
 
-You can find all details about the library and the OPC-Proxy Project at [opc-proxy.readthedocs.io](https://opc-proxy.readthedocs.io/en/latest/).
+You can find all details about the library and the OPC-Proxy Project at [opc-proxy.readthedocs.io](https://opc-proxy.readthedocs.io/en/latest/intro.html).
