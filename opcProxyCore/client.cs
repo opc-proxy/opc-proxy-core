@@ -118,10 +118,10 @@ namespace OpcProxyClient
                 logger.Warn("missing application certificate, using unsecure connection.");
             }
 
-            logger.Info("Discover endpoints of {0}.", user_config.opcServerURL);
+            logger.Info("Trying to connect to server endpoint:  {0}", user_config.opcServerURL);
             exitCode = ExitCode.ErrorDiscoverEndpoints;
             var selectedEndpoint = CoreClientUtils.SelectEndpoint(user_config.opcServerURL, haveAppCertificate, 15000);
-            logger.Info("    Selected endpoint uses: {0}",
+            logger.Info("Selected endpoint uses the following security policy: {0}",
                 selectedEndpoint.SecurityPolicyUri.Substring(selectedEndpoint.SecurityPolicyUri.LastIndexOf('#') + 1));
 
             logger.Info("Creating a session with OPC UA server.");

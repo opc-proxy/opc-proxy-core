@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 namespace Tests{
     public class clientTest{
 
-        OPCclient opc;
+       // OPCclient opc;
 
         [Fact]
         public void configTest()

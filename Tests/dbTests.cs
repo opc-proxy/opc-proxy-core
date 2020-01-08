@@ -63,13 +63,13 @@ namespace Tests
             ReadStatusCode s;
             
             var q = cDB.readValue( (new string[] {"ciao"}), out s);
-            Assert.Equal(1, q.Length );
+            Assert.Single(q);
             Assert.Equal(72, q[0].value);
             Assert.Equal(DateTime.Now.Second, q[0].timestamp.Second);
             Assert.Equal(ReadStatusCode.Ok, s);
 
             var p = cDB.readValue((new string[] {"ciao1"}), out s);
-            Assert.Equal(0, p.Length);
+            Assert.Empty(p);
             Assert.Equal(ReadStatusCode.VariableNotFoundInDB, s);
         }
     }
