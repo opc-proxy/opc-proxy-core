@@ -10,7 +10,7 @@ communication exposing the user to a simple API, so that one can read, but also 
 - Suitable for monitoring and controlling devices.
 - Simple API.
 - Reliable OPC client build with the [OPC-foundation](https://github.com/OPCFoundation/UA-.NETStandard) standard library.
-- Load nodes from an XML file (nodes2set) or simply browsing the server
+- Load nodes from an XML file (Nodeset XML spec) or simply browsing the server
 - Powerful Nodes loading selection options
 - Modular design with external connectors that can be added, extended and customized.
 - Supported connectors: [HTTP](https://opc-proxy.readthedocs.io/en/latest/connectors.html#grpc), [Kafka](https://opc-proxy.readthedocs.io/en/latest/connectors.html#kafka), [InfluxDB](https://opc-proxy.readthedocs.io/en/latest/connectors.html#influxdb).
