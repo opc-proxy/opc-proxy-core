@@ -476,12 +476,12 @@ public class NodesSelector:logged{
         if(Array.IndexOf(_config.whiteList,target) > -1) return true;
         if(Array.IndexOf(_config.blackList,target) > -1 ) return false;
 
-        foreach (string txt in _config.contains){
-            if(target.Contains(txt)) return true;
-        }
-
         foreach (string txt in _config.notContain){
             if(target.Contains(txt)) return false;
+        }
+
+        foreach (string txt in _config.contains){
+            if(target.Contains(txt)) return true;
         }
 
         foreach (string pattern in _config.matchRegEx){   
