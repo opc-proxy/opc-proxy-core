@@ -199,7 +199,8 @@ namespace OpcProxyCore{
 
          /// <summary>
         /// Read a list of variables value from the DB cache given their names.
-        /// Note: this function is not async, since liteDB do not support it yet.
+        /// **Note:** this function is not async, because of how the ReadStatus is passed (by reference)
+        /// this needs to be FIXED in later version.
         /// </summary>
         /// <param name="names">List of names of the variables</param>
         /// <param name="status">Status of the transaction, "Ok" if good, else see <see cref="ReadStatusCode"/> </param>
