@@ -259,9 +259,11 @@ namespace OpcProxyCore{
         /// <summary>
         /// Write Asyncronously to the OPC server the variable specified and its value.
         /// Takes care to do value conversion to the correct server type for the variable. 
+        /// NOTE: that it throws if var_name.Length != in_values.Length, so this function call
+        /// must be always within a try block.
         /// </summary>
         /// <param name="var_name">Display Name of the variable to write to</param>
-        /// <param name="value">Value to write</param>
+        /// <param name="in_values">Value to write</param>
         /// <returns></returns>
         public async Task<List<WriteVarResponse>> writeToOPCserver(string[] var_name, object[] in_values){
             

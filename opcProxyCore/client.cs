@@ -278,7 +278,9 @@ namespace OpcProxyClient
                 response.Add( new WriteVarResponse(nodes[i].name, values[i]) );
             }
             var sCodes = await Task.Factory.FromAsync<StatusCodeCollection>(beginWriteWrapper,endWriteWrapper, valuesToWrite);
-            // now here I assume that "sCodes" has same order as "valuesToWrite" and response, which maybe not the case CHECK-IT
+            // By OPC Specs is assumed "sCodes" is a List of results for the Nodes to write (see 7.34 for StatusCode definition). 
+            // The size and order of the list matches the size and order of the nodesToWrite request parameter. 
+            // There is one entry in this list for each Node contained in the nodesToWrite parameter.
             for(int k=0; k< sCodes.Count; k++){
                 if(StatusCode.IsBad(sCodes[k]))
                 {            
