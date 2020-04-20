@@ -243,56 +243,7 @@ namespace OpcProxyClient
 
             return return_nodes;
         }
-        public void crowl(){
-            logger.Info("4 - Browse the OPC UA server namespace.");
-            exitCode = ExitCode.ErrorBrowseNamespace;
-            ReferenceDescriptionCollection references;
-            Byte[] continuationPoint;
-
-            references = session.FetchReferences(ObjectIds.ObjectsFolder);
-
-            session.Browse(
-                null,
-                null,
-                ObjectIds.ObjectsFolder,
-                0u,
-                BrowseDirection.Forward,
-                ReferenceTypeIds.HierarchicalReferences,
-                true,
-                (uint)NodeClass.Variable | (uint)NodeClass.Object | (uint)NodeClass.Method,
-                out continuationPoint,
-                out references);
-
-            logger.Info(" DisplayName, BrowseName, NodeClass");
-            
-            foreach (var rd in references)
-            { 
-                logger.Info( " {0}, {1}, {2} ", rd.DisplayName, rd.BrowseName, rd.NodeClass);
-
-                ReferenceDescriptionCollection nextRefs;
-                byte[] nextCp;
-                session.Browse(
-                    null,
-                    null,
-                    ExpandedNodeId.ToNodeId(rd.NodeId, session.NamespaceUris),
-                    0u,
-                    BrowseDirection.Forward,
-                    ReferenceTypeIds.HierarchicalReferences,
-                    true,
-                    (uint)NodeClass.Variable | (uint)NodeClass.Object | (uint)NodeClass.Method,
-                    out nextCp,
-                    out nextRefs);
-
-                Dictionary <string, Dictionary<string, VariableNode>> p = new Dictionary<string, Dictionary<string, VariableNode>>();
-                foreach (var nextRd in nextRefs)
-                {
-                    logger.Info( "   + {0}, {1}, {2} ", nextRd.DisplayName, nextRd.BrowseName, nextRd.NodeClass);
-
-                }
-            }
-
-        }
-
+       
         private IAsyncResult beginWriteWrapper(AsyncCallback callback, object nodes_to_write){
             return session.BeginWrite(null, (WriteValueCollection)nodes_to_write, callback, null);
         }
@@ -308,76 +259,37 @@ namespace OpcProxyClient
             badstatus.Add(StatusCodes.Bad);
             return Task.FromResult(badstatus);
         }
-        public Task<StatusCodeCollection> asyncWrite(serverNode node, object value){
-
-            WriteValue valueToWrite = new WriteValue();
-            NodeId m_nodeId = new NodeId(node.serverIdentifier);
-            valueToWrite.NodeId = m_nodeId;
-            valueToWrite.AttributeId = Attributes.Value;
-            try {
-                valueToWrite.Value.Value = Convert.ChangeType( value, Type.GetType( node.systemType ));
-                valueToWrite.Value.SourceTimestamp = DateTime.Now;
-            }
-            catch (Exception e){
-                logger.Error(e, "Error during conversion of node value");
-                return badStatusCall();
-            }
-            
-            valueToWrite.Value.StatusCode = StatusCodes.Good;
-
+        public async Task<List<WriteVarResponse>> asyncWrite(List<serverNode> nodes, List<object> values)
+        {
+            List<WriteVarResponse> response = new List<WriteVarResponse>();
             WriteValueCollection valuesToWrite = new WriteValueCollection();
-            valuesToWrite.Add(valueToWrite);
-            
-            return Task.Factory.FromAsync<StatusCodeCollection>(beginWriteWrapper,endWriteWrapper, valuesToWrite);
 
+            for(int i=0; i< nodes.Count; i++)
+            {
+                WriteValue valueToWrite = new WriteValue();
+                NodeId m_nodeId = new NodeId(nodes[i].serverIdentifier);
+                valueToWrite.NodeId = m_nodeId;
+                valueToWrite.AttributeId = Attributes.Value;
+                valueToWrite.Value.Value = values[i] ;
+                valueToWrite.Value.SourceTimestamp = DateTime.UtcNow;
+                valueToWrite.Value.StatusCode = StatusCodes.Good;
+                valuesToWrite.Add(valueToWrite);
+                // register that the node has been sent, success by default.
+                response.Add( new WriteVarResponse(nodes[i].name, values[i]) );
+            }
+            var sCodes = await Task.Factory.FromAsync<StatusCodeCollection>(beginWriteWrapper,endWriteWrapper, valuesToWrite);
+            // now here I assume that "sCodes" has same order as "valuesToWrite" and response, which maybe not the case CHECK-IT
+            for(int k=0; k< sCodes.Count; k++){
+                if(StatusCode.IsBad(sCodes[k]))
+                {            
+                    response[k].success = false ;
+                    response[k].statusCode = sCodes[k].Code;
+                }
+            }
+            return response;
         }
 
         
-        public void write(){
-            logger.Info("9 - Reset counter");
-            session.FetchNamespaceTables();
-
-            // writing value sync :
-             try
-            {
-                WriteValue valueToWrite = new WriteValue();
-                NodeId m_nodeId = new NodeId("ns=3;s=\"ciao\"");
-                valueToWrite.NodeId = m_nodeId;
-                valueToWrite.AttributeId = Attributes.Value;
-                valueToWrite.Value.Value = Convert.ToInt16(7);
-                valueToWrite.Value.StatusCode = StatusCodes.Good;
-                
-                WriteValueCollection valuesToWrite = new WriteValueCollection();
-                valuesToWrite.Add(valueToWrite);
-
-                // write current value.
-                StatusCodeCollection results = null;
-                DiagnosticInfoCollection diagnosticInfos = null;
-
-
-                // RequestHeader req = new RequestHeader();
-                ResponseHeader resp =  session.Write(
-                    null,
-                    valuesToWrite,
-                    out results,
-                    out diagnosticInfos);
-                
-                ClientBase.ValidateResponse(results, valuesToWrite);
-                ClientBase.ValidateDiagnosticInfos(diagnosticInfos, valuesToWrite);
-
-                if (StatusCode.IsBad(results[0]))
-                {
-                    throw new ServiceResultException(results[0]);
-                }
-                logger.Info("Written OK :)");
-
-            }
-            catch (Exception exception)
-            {
-                logger.Error(exception,"Error during write value");
-            }
-            
-        }
 
         public void subscribe(List<serverNode> serverNodes, List<EventHandler<MonItemNotificationArgs>> handlers){
 

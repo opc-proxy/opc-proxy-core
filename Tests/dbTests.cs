@@ -7,6 +7,7 @@ using LiteDB;
 using System.Collections.Generic;
 using System.Linq;
 using converter;
+using Opc.Ua ;
 
 namespace Tests
 {
@@ -50,7 +51,7 @@ namespace Tests
 
         [Fact]
         public void fillDBWithNewVar(){
-            cDB.updateBuffer("ciao",72,DateTime.Now);
+            cDB.updateBuffer("ciao",72,DateTime.UtcNow);
             var q = cDB.latestValues.FindOne(Query.EQ("name","ciao"));
             Assert.NotNull(q);
             Assert.Equal(72, q.value);
@@ -58,19 +59,20 @@ namespace Tests
         }
 
         [Fact]
-        public void readFromDB(){
-            cDB.updateBuffer("ciao",72,DateTime.Now);
-            ReadStatusCode s;
+        public async void readFromDB(){
+            cDB.updateBuffer("ciao",72,DateTime.UtcNow);
             
-            var q = cDB.readValue( (new string[] {"ciao"}), out s);
+            var q = await cDB.readValue( (new string[] {"ciao"}));
             Assert.Single(q);
             Assert.Equal(72, q[0].value);
-            Assert.Equal(DateTime.Now.Second, q[0].timestamp.Second);
-            Assert.Equal(ReadStatusCode.Ok, s);
+            Assert.Equal(DateTime.UtcNow.Second, q[0].timestamp.Second);
+            Assert.True(q[0].success);
+            Assert.Equal(StatusCodes.Good, q[0].statusCode);
 
-            var p = cDB.readValue((new string[] {"ciao1"}), out s);
-            Assert.Empty(p);
-            Assert.Equal(ReadStatusCode.VariableNotFoundInDB, s);
+            var p = await cDB.readValue((new string[] {"ciao1"}));
+            Assert.Single(p);
+            Assert.False(p[0].success);
+            Assert.Equal(StatusCodes.BadNoEntryExists, p[0].statusCode);
         }
     }
 }

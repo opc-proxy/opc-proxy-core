@@ -1,5 +1,5 @@
 using System;
-using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -27,10 +27,10 @@ namespace OpcProxyCore{
         public LiteDatabase db = null;
         public MemoryStream mem = null;
         
-        public LiteCollection<dbNode> nodes {get; private set;}
-        public LiteCollection<dbNamespace> namespaces {get;  set;}
-        public LiteCollection<dbVariableValue> latestValues {get; set;}
-        public LiteCollection<dbVariableValue> bufferValues {get; set;}
+        public ILiteCollection<dbNode> nodes {get; private set;}
+        public ILiteCollection<dbNamespace> namespaces {get;  set;}
+        public ILiteCollection<dbVariableValue> latestValues {get; set;}
+        public ILiteCollection<dbVariableValue> bufferValues {get; set;}
         //bool disposed = false;
         public static NLog.Logger logger = null;
 
@@ -210,7 +210,7 @@ namespace OpcProxyCore{
             serverNode s = new serverNode(node);
             var ns = namespaces.FindOne(Query.EQ("internalIndex", node.internalIndex));
             if(ns == null){
-                throw new Exception("Node Exist but has not related namespace");
+                throw new Exception("Node exist but has not related namespace");
             }
             s.currentServerIndex = ns.currentServerIndex;
             s.serverIdentifier = "ns=" + s.currentServerIndex.ToString();
@@ -245,43 +245,47 @@ namespace OpcProxyCore{
                 var_idx.value = Convert.ChangeType(value, Type.GetType(var_idx.systemType));
                 var_idx.timestamp = time;
                 latestValues.Upsert(var_idx);
-
             } 
             catch (Exception e){
-                logger.Error(e, "Error in updating value for variable " + name);
-                Console.WriteLine(e.Message);
+                logger.Error("Error in updating value for variable " + name);
+                logger.Error(e.Message);
             }           
         }
 
         /// <summary>
         /// Read a list of variables value from the DB cache given their names.
-        /// Note: this function is not async, since liteDB do not support it yet.
         /// </summary>
         /// <param name="names">List of names of the variables</param>
         /// <param name="status">Status of the transaction, "Ok" if good, else see <see cref="ReadStatusCode"/> </param>
         /// <returns>Returns a list of dbVariable</returns>
-        public dbVariableValue[] readValue(string[] names, out ReadStatusCode status){
-            
-            BsonArray bson_arr = new BsonArray();
-            foreach(string name in names ){
-                bson_arr.Add(name);
-            }
+        public Task<List<ReadVarResponse>> readValue( string[] names ){
+            var t = Task.Run(()=>{
+                BsonArray bson_arr = new BsonArray();
+                foreach(string name in names ){
+                    bson_arr.Add(name);
+                }
 
-            dbVariableValue[] read_var =  latestValues.Find(Query.In("name",bson_arr)).ToArray();
-            
-            if(read_var.Count() != names.Length)  { 
-                status = ReadStatusCode.VariableNotFoundInDB;
+                var read_var =  latestValues.Find(Query.In("name",bson_arr)).ToList();
+                List<ReadVarResponse> response = new List<ReadVarResponse>();
 
                 string l = "";
-                List<dbVariableValue> values = read_var.ToList();
-                foreach(var v in names){
-                    if( values.Find( x => x.name == v) == null) l += v + ", ";
+                for(int i=0; i< names.Length; i++)
+                {   
+                    var var_i = read_var.Find( x => x.name == names[i] );
+                    if(  var_i == null) 
+                    {
+                        l += names[i] + ", ";
+                        response.Add( new ReadVarResponse(names[i],StatusCodes.BadNoEntryExists) );
+                    }
+                    else response.Add( new ReadVarResponse(var_i) );
                 }
-                logger.Warn("Some of the varibles requested to read were not found: " + l );
-            }
-            else status = ReadStatusCode.Ok;
-            
-            return read_var;
+                if(l !="")  { 
+                    logger.Warn("Some of the varibles requested to read were not found: " + l );
+                }
+                return response;
+            });    
+
+            return t;        
         }
 
         /// <summary>
@@ -395,9 +399,55 @@ namespace OpcProxyCore{
         public dbVariableValue(){
             Id = -9;
             name = "does_not_exist";
-            value = -9;
+            value = null;
             systemType = "null";
-            timestamp = DateTime.Now;
+            timestamp = DateTime.UtcNow;
         }
     }
+
+    public class ReadVarResponse : dbVariableValue {
+        public double timestampUTC_ms {
+            get  {
+                return timestamp.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+            }
+        }
+        public bool success {get; set;}
+        public uint statusCode {get; set;}
+
+        public ReadVarResponse(string Name, uint code):base(){
+            success = false;
+            name = Name;
+            statusCode = code;
+        }
+        public ReadVarResponse(dbVariableValue v):base(){
+            Id = v.Id;
+            name = v.name;
+            value = v.value;
+            systemType = v.systemType;
+            timestamp = v.timestamp;
+            success = true;
+            statusCode = StatusCodes.Good;
+        }
+    }
+
+    public class WriteVarResponse {
+        public string name {get;set;}
+        public bool success {get;set;}
+        public uint statusCode {get;set;}
+        public object value {get;set;}
+        public WriteVarResponse(string Name, object val){
+            name = Name;
+            success = true;
+            value = val;
+            statusCode = StatusCodes.Good;
+        }
+
+        public WriteVarResponse(string Name, uint code){
+            name = Name;
+            success = false;
+            value = null;
+            statusCode = code;
+        }
+    }
+    
 }

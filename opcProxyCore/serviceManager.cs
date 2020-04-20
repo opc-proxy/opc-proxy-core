@@ -199,14 +199,11 @@ namespace OpcProxyCore{
 
          /// <summary>
         /// Read a list of variables value from the DB cache given their names.
-        /// **Note:** this function is not async, because of how the ReadStatus is passed (by reference)
-        /// this needs to be FIXED in later version.
         /// </summary>
         /// <param name="names">List of names of the variables</param>
-        /// <param name="status">Status of the transaction, "Ok" if good, else see <see cref="ReadStatusCode"/> </param>
         /// <returns>Returns a list of dbVariable</returns>
-        public dbVariableValue[] readValueFromCache(string[] names, out ReadStatusCode status){
-            return db.readValue(names, out status);
+        public  Task<List<ReadVarResponse>> readValueFromCache(string[] names){
+            return  db.readValue(names);
         }
 
 
@@ -218,7 +215,6 @@ namespace OpcProxyCore{
         /// all the event handlers are invoked, there is no filter currently.
         /// </summary>
         public void subscribeOpcNodes(){
-
             opc.subscribe( db.getDbNodes(), collectOnNotificationEventHandlers() );
         }
 
@@ -267,19 +263,44 @@ namespace OpcProxyCore{
         /// <param name="var_name">Display Name of the variable to write to</param>
         /// <param name="value">Value to write</param>
         /// <returns></returns>
-        public Task<StatusCodeCollection> writeToOPCserver(string var_name, object value){
+        public async Task<List<WriteVarResponse>> writeToOPCserver(string[] var_name, object[] in_values){
             
-            serverNode s_node;
+            if(var_name.Length != in_values.Length) throw new Exception("Names and Values must be arrays of same size.");
+            var s_nodes = new List<serverNode>();
+            var values = new List<object>();
+            var bad_responses = new List<WriteVarResponse>();
 
-            try{
-                s_node = db.getServerNode(var_name);
+            for(uint k=0; k< var_name.Length; k++ )
+            {
+                try{
+                    var node = db.getServerNode(var_name[k]) ;
+                    var val = Convert.ChangeType(in_values[k], Type.GetType(node.systemType));
+                    values.Add( val );
+                    s_nodes.Add( node );
+                }
+                catch(Exception e)
+                {
+                    if(e.Message.ToLower().Contains("exist"))
+                    {
+                        logger.Error("Write failed. Variable \""+var_name[k] +"\" does not exist in cache DB.");
+                        bad_responses.Add( new WriteVarResponse(var_name[k], StatusCodes.BadNoEntryExists) );
+                    } 
+                    else 
+                    {
+                        logger.Error("Write failed. Variable \""+var_name[k] +"\" Value type not compatible.");
+                        bad_responses.Add( new WriteVarResponse(var_name[k], StatusCodes.BadTypeMismatch) );
+                    }
+                }
             }
-            catch{
-                logger.Error("Write failed. Variable \""+var_name+"\" does not exist in cache DB.");
-                return opc.badStatusCall();
-            }
+            var response = new List<WriteVarResponse>();
+            if(values.Count != 0 && s_nodes.Count != 0 ) response = await opc.asyncWrite(s_nodes, values);
 
-            return opc.asyncWrite(s_node, value);
+            foreach (var item in response)
+            {
+                if(item.success) db.updateBuffer(item.name, item.value, DateTime.UtcNow );
+            }
+            response.AddRange(bad_responses);
+            return response;
         }
 
         public JObject getRawConfig(){
