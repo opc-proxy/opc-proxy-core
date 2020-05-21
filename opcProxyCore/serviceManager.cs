@@ -367,6 +367,7 @@ namespace OpcProxyCore{
         /// Initialization. Everything that needs to be done for initializzation will be passed here.
         /// </summary>
         /// <param name="config">JSON configuration see Newtonsoft.Json for how to parse an object out of it</param>
+        /// <param name="cts">Cancellation Token Source, to be able to gracefully shutdown in case of errors.</param>
         void init(JObject config, CancellationTokenSource cts);
         
         /// <summary>

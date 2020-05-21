@@ -102,8 +102,8 @@ namespace OpcProxyCore{
         /// <summary>
         /// IOPCconnect.OnNotification interface implementation see <see cref="IOPCconnect"/> for description.
         /// </summary>
-        /// <param name="item"></param>
-        /// <param name="e"></param>
+        /// <param name="sub"></param>
+        /// <param name="items"></param>
         //public void OnNotification(MonitoredItem item, MonitoredItemNotificationEventArgs e){
         public void OnNotification(object sub, MonItemNotificationArgs items){
 
@@ -256,7 +256,6 @@ namespace OpcProxyCore{
         /// Read a list of variables value from the DB cache given their names.
         /// </summary>
         /// <param name="names">List of names of the variables</param>
-        /// <param name="status">Status of the transaction, "Ok" if good, else see <see cref="ReadStatusCode"/> </param>
         /// <returns>Returns a list of dbVariable</returns>
         public Task<List<ReadVarResponse>> readValue( string[] names ){
             var t = Task.Run(()=>{

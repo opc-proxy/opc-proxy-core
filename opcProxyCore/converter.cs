@@ -468,7 +468,7 @@ public class NodesSelector:logged{
     /// Selects the provided string against the selection rules in the node config. In case no rules are specified 
     /// the default is to take all nodes.
     /// </summary>
-    /// <param name="node"></param>
+    /// <param name="target"></param>
     /// <returns>true if the node match any of the selection rules, false otherwise.</returns>
     public Boolean selectNode(string target){
 

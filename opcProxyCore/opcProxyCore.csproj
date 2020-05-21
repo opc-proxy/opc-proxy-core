@@ -3,12 +3,13 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>opcProxy.core</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Authors>Alessandro Manfredini</Authors>
     <Company>University of Zurich</Company>
     <RepositoryUrl>https://github.com/opc-proxy/opc-proxy-core</RepositoryUrl>
     <Title>OPC-Proxy Core Library</Title>
     <ProjectURL>https://opc-proxy.readthedocs.io/en/latest/intro.html</ProjectURL>
+     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageDescription>
 	    The OPC-Proxy allows to build and deploy a customized IoT gateway to connect any OPC server with your network of microservices or cloud. This library is suitable for monitoring and control of devices. We focused on defining a protocol for bidirectional communication exposing the user to a simple API, so that one can read, but also write values to the OPC server without knowing details about OPC.
 	    **Documentation at:** https://opc-proxy.readthedocs.io/en/latest/intro.html
@@ -21,6 +22,10 @@
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua" Version="1.4.360.33" />
   </ItemGroup>
-
+  
+  <PropertyGroup>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+</PropertyGroup>
 
 </Project>
