@@ -404,6 +404,11 @@ namespace OpcProxyCore{
         }
     }
 
+    /// <summary>
+    /// Response Class for chache DB read.
+    /// Parameters: **success** is true if the request was successfull, **statusCode** are OPC standard status codes for request and response see opc.ua.StatusCodes. 
+    /// Trick: statusCode.ToString() return a human readable version of the error type.
+    /// </summary>
     public class ReadVarResponse : dbVariableValue {
         public double timestampUTC_ms {
             get  {
@@ -411,12 +416,12 @@ namespace OpcProxyCore{
             }
         }
         public bool success {get; set;}
-        public uint statusCode {get; set;}
+        public StatusCode statusCode {get; set;} // this has a nice ToString() method that returns a human readable error
 
         public ReadVarResponse(string Name, uint code):base(){
             success = false;
             name = Name;
-            statusCode = code;
+            statusCode = new StatusCode(code);
         }
         public ReadVarResponse(dbVariableValue v):base(){
             Id = v.Id;
@@ -425,27 +430,32 @@ namespace OpcProxyCore{
             systemType = v.systemType;
             timestamp = v.timestamp;
             success = true;
-            statusCode = StatusCodes.Good;
+            statusCode = new StatusCode(StatusCodes.Good);
         }
     }
 
+    /// <summary>
+    /// Response Class for OPC server write. 
+    /// Parameters: **success** is true if the request was successfull, **statusCode** are OPC standard status codes for request and response see opc.ua.StatusCodes. 
+    /// Trick: statusCode.ToString() return a human readable version of the error type.
+    /// </summary>
     public class WriteVarResponse {
         public string name {get;set;}
         public bool success {get;set;}
-        public uint statusCode {get;set;}
+        public StatusCode statusCode {get;set;} // this has a nice ToString() method that returns a human readable error
         public object value {get;set;}
         public WriteVarResponse(string Name, object val){
             name = Name;
             success = true;
             value = val;
-            statusCode = StatusCodes.Good;
+            statusCode = new StatusCode(StatusCodes.Good);
         }
 
         public WriteVarResponse(string Name, uint code){
             name = Name;
             success = false;
             value = null;
-            statusCode = code;
+            statusCode = new StatusCode(code);
         }
     }
     

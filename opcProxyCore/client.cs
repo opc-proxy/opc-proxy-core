@@ -271,11 +271,16 @@ namespace OpcProxyClient
                 valueToWrite.NodeId = m_nodeId;
                 valueToWrite.AttributeId = Attributes.Value;
                 valueToWrite.Value.Value = values[i] ;
-                valueToWrite.Value.SourceTimestamp = DateTime.UtcNow;
                 valueToWrite.Value.StatusCode = StatusCodes.Good;
                 valuesToWrite.Add(valueToWrite);
                 // register that the node has been sent, success by default.
                 response.Add( new WriteVarResponse(nodes[i].name, values[i]) );
+                logger.Debug("Sending write request to server for node " + nodes[i].name + ". Request INFO: " );
+                logger.Debug("\t Node ID: "       + valueToWrite.NodeId.ToString());
+                logger.Debug("\t Attribute ID: " + valueToWrite.AttributeId.ToString());
+                logger.Debug("\t Value: " + valueToWrite.Value.Value.ToString());
+                logger.Debug("\t TimeStamp: " + valueToWrite.Value.SourceTimestamp.ToString());
+                logger.Debug("\t Status Code: " + valueToWrite.Value.StatusCode.ToString());
             }
             var sCodes = await Task.Factory.FromAsync<StatusCodeCollection>(beginWriteWrapper,endWriteWrapper, valuesToWrite);
             // By OPC Specs is assumed "sCodes" is a List of results for the Nodes to write (see 7.34 for StatusCode definition). 
@@ -285,7 +290,8 @@ namespace OpcProxyClient
                 if(StatusCode.IsBad(sCodes[k]))
                 {            
                     response[k].success = false ;
-                    response[k].statusCode = sCodes[k].Code;
+                    response[k].statusCode = sCodes[k];
+                    logger.Error("Failed write request on OPC-server for node: "+response[k].name +" status code " + sCodes[k].ToString());
                 }
             }
             return response;
