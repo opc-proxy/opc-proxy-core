@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>opcProxy.core</PackageId>
-    <Version>0.2.3</Version>
+    <Version>0.3.0</Version>
     <Authors>Alessandro Manfredini</Authors>
     <Company>University of Zurich</Company>
     <RepositoryUrl>https://github.com/opc-proxy/opc-proxy-core</RepositoryUrl>
