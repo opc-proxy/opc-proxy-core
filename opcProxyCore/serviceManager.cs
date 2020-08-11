@@ -206,6 +206,23 @@ namespace OpcProxyCore{
             return  db.readValue(names);
         }
 
+        /// <summary>
+        /// Read a list of variables values directly from the opc-server, not passing from db cache.
+        /// A server protection is in place so that request with more that 500 variables are split in 
+        /// multiple sub-requests.
+        /// </summary>
+        /// <param name="names">variable names</param>
+        /// <returns></returns>
+        public Task<List<ReadVarResponse>> readValueFromServer(string[] names){
+            return  db.readValueFromClient(names);
+        }
+
+        public async void forceDBupdate(){
+            var resp =  await opc.ReadNodesValuesWrapper(db.getDbNodes());
+            foreach(var v in resp){
+                db.updateBuffer(v.name,v.value,v.timestamp,v.statusCode.Code);
+            }
+        }
 
         /// <summary>
         /// Gets a list of nodes from the cacheDB and subscribes to opc-server change for all of them.
@@ -216,8 +233,10 @@ namespace OpcProxyCore{
         /// </summary>
         public void subscribeOpcNodes(){
             opc.subscribe( db.getDbNodes(), collectOnNotificationEventHandlers() );
+            forceDBupdate();
         }
 
+        
         /// <summary>
         /// Return a list of eventHandler to register to the onNotification event.
         /// This takes all the I/O interfaces and add their notificationHandler to the list.

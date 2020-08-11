@@ -204,12 +204,9 @@ namespace OpcProxyClient
             }
 
             logger.Debug("Retriving data types of the selected nodes...");
-            DataValueCollection data_types;
-            DataValueCollection ranks;
-            DiagnosticInfoCollection di;
-            session.Read(null,0.0, TimestampsToReturn.Neither, nodes_to_read,out data_types, out di);
-            session.Read(null,0.0, TimestampsToReturn.Neither, ranks_to_read,out ranks, out di);
-            
+            DataValueCollection data_types = ReadNodesValues(TimestampsToReturn.Neither, nodes_to_read);
+            DataValueCollection ranks = ReadNodesValues(TimestampsToReturn.Neither, ranks_to_read);
+
             List<dbNode> return_nodes = new List<dbNode>();
             for(int i=0; i< nodes_to_read.Count; i++){
                 
@@ -244,6 +241,59 @@ namespace OpcProxyClient
             return return_nodes;
         }
        
+        public DataValueCollection ReadNodesValues( TimestampsToReturn timestamp, ReadValueIdCollection nodes_to_read ){
+
+            DataValueCollection data_types = new DataValueCollection();
+
+            // limiting the number of nodes read to 500 ---> about 2kBytes + header + diagnosticInfo
+            // In OPC spec I could not find any specific limit, but given the existence of continuation point
+            // in Browse I prefer to introduce this here as a protection for small devices.
+            for(int k=0; k <= (int)(nodes_to_read.Count / 500); k++){
+                int idx = k * 500;
+                int count = ( (k * 500 + 500) < nodes_to_read.Count ) ?  500 : (nodes_to_read.Count - k * 500 ) ;
+                if(count == 0 ) continue;
+                ReadValueIdCollection temp_nodes_to_read = new ReadValueIdCollection();
+                temp_nodes_to_read.AddRange(nodes_to_read.GetRange(idx, count));
+
+                DataValueCollection tmp_data_types;
+                DiagnosticInfoCollection tmp_di;
+                
+                session.Read(null,0.0, timestamp, temp_nodes_to_read, out tmp_data_types, out tmp_di);
+
+                data_types.AddRange(tmp_data_types);
+            }
+            return data_types;
+        }
+
+        public  Task<List<ReadVarResponse>> ReadNodesValuesWrapper( List<serverNode> nodes){
+            return Task.Run(()=>{
+                ReadValueIdCollection r = new ReadValueIdCollection();
+                List<ReadVarResponse> resp = new List<ReadVarResponse>();
+
+                for( int k=0; k < nodes.Count; k++){
+                    r.Add(new ReadValueId{ 
+                        NodeId = new NodeId(nodes[k].serverIdentifier),
+                        AttributeId = Attributes.Value
+                    });
+                }
+                var dvc = ReadNodesValues(TimestampsToReturn.Server, r);
+
+                for( int k=0; k < nodes.Count; k++){
+                    var temp_resp = new ReadVarResponse(nodes[k].name, dvc[k].StatusCode.Code);
+                    temp_resp.timestamp = dvc[k].ServerTimestamp;
+                    temp_resp.value = dvc[k].Value;
+                    temp_resp.systemType = nodes[k].systemType;
+                    resp.Add( temp_resp );
+                    logger.Debug("Read node " + nodes[k].name + ". Returns: " );
+                    logger.Debug("\t Node ID: "       + nodes[k].serverIdentifier.ToString());
+                    logger.Debug("\t Value: " + dvc[k].Value.ToString());
+                    logger.Debug("\t TimeStamp: " + dvc[k].ServerTimestamp.ToString());
+                    logger.Debug("\t Status Code: " + dvc[k].StatusCode.ToString()); 
+                }
+                return resp;
+            });
+        }
+
         private IAsyncResult beginWriteWrapper(AsyncCallback callback, object nodes_to_write){
             return session.BeginWrite(null, (WriteValueCollection)nodes_to_write, callback, null);
         }

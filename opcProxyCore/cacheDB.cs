@@ -5,32 +5,34 @@ using System.Collections.Generic;
 using System.IO;
 using LiteDB;
 using Newtonsoft.Json.Linq;
-using Opc.Ua ;
+using Opc.Ua;
 using NLog;
-using OpcProxyClient ;
+using OpcProxyClient;
 
-namespace OpcProxyCore{
-  public enum ReadStatusCode : int
+namespace OpcProxyCore
+{
+    public enum ReadStatusCode : int
     {
         Ok = 0,
         VariableNotFoundInDB = 1
-        
+
     };
 
 
     /// <summary>
     /// Class that holds the in memory cache database. LiteDB is used as chache DB.
     /// </summary>
-    public class cacheDB : Managed {
-//    class cacheDB : IDisposable {
+    public class cacheDB : Managed
+    {
+        //    class cacheDB : IDisposable {
         public double p;
         public LiteDatabase db = null;
         public MemoryStream mem = null;
-        
-        public ILiteCollection<dbNode> nodes {get; private set;}
-        public ILiteCollection<dbNamespace> namespaces {get;  set;}
-        public ILiteCollection<dbVariableValue> latestValues {get; set;}
-        public ILiteCollection<dbVariableValue> bufferValues {get; set;}
+
+        public ILiteCollection<dbNode> nodes { get; private set; }
+        public ILiteCollection<dbNamespace> namespaces { get; set; }
+        public ILiteCollection<dbVariableValue> latestValues { get; set; }
+        public ILiteCollection<dbVariableValue> bufferValues { get; set; }
         //bool disposed = false;
         public static NLog.Logger logger = null;
 
@@ -47,18 +49,20 @@ namespace OpcProxyCore{
         /// 
         ///  [overwrite] - Boolean : if true force overwrite of DB file, false will load from file. Default false.
         /// </para>
-        public cacheDB( JObject config ){
+        public cacheDB(JObject config)
+        {
             _config = config.ToObject<dbConfigWrapper>().nodesDatabase;
             logger = LogManager.GetLogger(this.GetType().Name);
             init();
         }
 
-        private void createCollections(){
+        private void createCollections()
+        {
 
-            nodes           = db.GetCollection<dbNode>("nodes");
-            namespaces      = db.GetCollection<dbNamespace>("namespaces");
-            latestValues    = db.GetCollection<dbVariableValue>("latestValues");
-            bufferValues    = db.GetCollection<dbVariableValue>("bufferValues");
+            nodes = db.GetCollection<dbNode>("nodes");
+            namespaces = db.GetCollection<dbNamespace>("namespaces");
+            latestValues = db.GetCollection<dbVariableValue>("latestValues");
+            bufferValues = db.GetCollection<dbVariableValue>("bufferValues");
 
             // Creating indexes
             nodes.EnsureIndex("name");
@@ -70,23 +74,27 @@ namespace OpcProxyCore{
             bufferValues.EnsureIndex("timestamp");
         }
 
-        private void init(){
-            try{
+        private void init()
+        {
+            try
+            {
                 mem = new MemoryStream();
 
-                db = (_config.isInMemory) ? new LiteDatabase(mem) : new LiteDatabase(@_config.filename) ;   
+                db = (_config.isInMemory) ? new LiteDatabase(mem) : new LiteDatabase(@_config.filename);
             }
-            catch(Exception ex){
+            catch (Exception ex)
+            {
                 logger.Error("Failed to establish Cache database");
                 logger.Error("Exception: " + ex.Message);
-                System.Environment.Exit(0); 
+                System.Environment.Exit(0);
                 return;
             }
-            
+
             createCollections();
         }
 
-        public void clear(){
+        public void clear()
+        {
             db.Dispose();
             mem.Dispose();
         }
@@ -94,7 +102,8 @@ namespace OpcProxyCore{
         /// Drops the memory/file streams and the db and re-initialize a fresh empty db instance. 
         /// Usefull when one wants to re-load nodes in case node XML file changed.
         /// </summary>
-        public void refresh(){
+        public void refresh()
+        {
             clear();
             init();
         }
@@ -105,41 +114,50 @@ namespace OpcProxyCore{
         /// <param name="sub"></param>
         /// <param name="items"></param>
         //public void OnNotification(MonitoredItem item, MonitoredItemNotificationEventArgs e){
-        public void OnNotification(object sub, MonItemNotificationArgs items){
+        public void OnNotification(object sub, MonItemNotificationArgs items)
+        {
 
-             foreach(var itm in items.values){
+            foreach (var itm in items.values)
+            {
                 updateBuffer(items.name, itm.Value, itm.SourceTimestamp);
                 logger.Debug("Updating value for {0} to {1} at {2}", items.name, itm.Value, itm.SourceTimestamp);
             }
         }
 
 
-        public void insertNamespacesIfNotExist(NamespaceTable sessionNamespaceURI){
+        public void insertNamespacesIfNotExist(NamespaceTable sessionNamespaceURI)
+        {
 
             string[] namespaces_from_table = sessionNamespaceURI.ToArray();
-            for(int k=0; k< sessionNamespaceURI.Count; k++){
-                dbNamespace ns = new dbNamespace {
+            for (int k = 0; k < sessionNamespaceURI.Count; k++)
+            {
+                dbNamespace ns = new dbNamespace
+                {
                     internalIndex = k,
                     URI = namespaces_from_table[k],
                     currentServerIndex = k
                 };
                 var ns_existing = namespaces.FindOne(Query.EQ("URI", ns.URI));
-                if(ns_existing == null){
+                if (ns_existing == null)
+                {
                     namespaces.Insert(ns);
                 }
             }
         }
 
-        public void insertNodeIfNotExist(List<dbNode> input_nodes){
+        public void insertNodeIfNotExist(List<dbNode> input_nodes)
+        {
             foreach (var node in input_nodes)
             {
                 insertNodeIfNotExist(node);
             }
         }
 
-        public void insertNodeIfNotExist(dbNode input_node){
+        public void insertNodeIfNotExist(dbNode input_node)
+        {
             var node_existing = nodes.FindOne(Query.EQ("name", input_node.name));
-            if(node_existing == null){
+            if (node_existing == null)
+            {
                 nodes.Insert(input_node);
             }
         }
@@ -148,21 +166,24 @@ namespace OpcProxyCore{
         /// Assign to previously loaded namespaces the current local index in the server
         /// </summary>
         /// <param name="sessionNamespaceURI"></param>
-        public void updateNamespace(NamespaceTable sessionNamespaceURI){
+        public void updateNamespace(NamespaceTable sessionNamespaceURI)
+        {
             var internal_namespaces = namespaces.FindAll();
-            
-            foreach(var n in internal_namespaces){
+
+            foreach (var n in internal_namespaces)
+            {
                 n.currentServerIndex = sessionNamespaceURI.GetIndex(n.URI);
                 namespaces.Update(n);
-                if(n.currentServerIndex == -1)
+                if (n.currentServerIndex == -1)
                 {
                     logger.Warn("namespace \"" + n.URI + "\" not found in server");
                     logger.Warn("The known namespaces are: ");
-                    foreach(var  ns in sessionNamespaceURI.ToArray() ){
-                        logger.Warn("\t'" + ns +"'");
+                    foreach (var ns in sessionNamespaceURI.ToArray())
+                    {
+                        logger.Warn("\t'" + ns + "'");
                     }
                 }
-                logger.Debug("namespace updated '"+n.URI+"' to index " + n.currentServerIndex);
+                logger.Debug("namespace updated '" + n.URI + "' to index " + n.currentServerIndex);
             }
 
         }
@@ -171,21 +192,24 @@ namespace OpcProxyCore{
         /// Returns a list of nodes that can be used to easily point to the current server node
         /// </summary>
         /// <returns></returns>
-        public List<serverNode> getDbNodes(){
+        public List<serverNode> getDbNodes()
+        {
             var ns = namespaces.FindAll();
-            Dictionary <int, int> namespace_index_relation = new Dictionary <int,int>{};
-            foreach(var name in ns){
+            Dictionary<int, int> namespace_index_relation = new Dictionary<int, int> { };
+            foreach (var name in ns)
+            {
                 namespace_index_relation.Add(name.internalIndex, name.currentServerIndex);
             }
 
-            List<serverNode> Out = new List<serverNode>{};
+            List<serverNode> Out = new List<serverNode> { };
             var nodes_list = nodes.FindAll();
             logger.Info("Number of selected nodes: " + nodes_list.Count());
-            
-            foreach(var node in nodes_list){
+
+            foreach (var node in nodes_list)
+            {
                 serverNode s = new serverNode(node);
                 int temp = 0;
-                namespace_index_relation.TryGetValue(node.internalIndex,out temp);
+                namespace_index_relation.TryGetValue(node.internalIndex, out temp);
                 s.currentServerIndex = temp;
                 s.serverIdentifier = "ns=" + s.currentServerIndex.ToString();
                 s.serverIdentifier += ";" + node.identifier;
@@ -202,14 +226,17 @@ namespace OpcProxyCore{
         /// </summary>
         /// <param name="name">Name of the variable</param>
         /// <returns></returns>
-        public serverNode getServerNode(string name){
+        public serverNode getServerNode(string name)
+        {
             var node = nodes.FindOne(Query.EQ("name", name));
-            if(node == null){
+            if (node == null)
+            {
                 throw new Exception("Node does not exist");
             }
             serverNode s = new serverNode(node);
             var ns = namespaces.FindOne(Query.EQ("internalIndex", node.internalIndex));
-            if(ns == null){
+            if (ns == null)
+            {
                 throw new Exception("Node exist but has not related namespace");
             }
             s.currentServerIndex = ns.currentServerIndex;
@@ -224,7 +251,8 @@ namespace OpcProxyCore{
         /// </summary>
         /// <param name="name">Name of the node to match</param>
         /// <returns></returns>
-        public dbNode getDbNode(string name){
+        public dbNode getDbNode(string name)
+        {
             return nodes.FindOne(Query.EQ("name", name));
         }
 
@@ -234,22 +262,27 @@ namespace OpcProxyCore{
         /// <param name="name">name of variable</param>
         /// <param name="value"> updated value of variable</param>
         /// <param name="time"> timestamp of when it changed</param>
-        public void updateBuffer(string name, object value, DateTime time){
-            try{
-                dbVariableValue var_idx = latestValues.FindOne(Query.EQ("name",name));
+        /// <param name="status"> Status of variable, default to good </param>
+        public void updateBuffer(string name, object value, DateTime time, uint status = StatusCodes.Good)
+        {
+            try
+            {
+                dbVariableValue var_idx = latestValues.FindOne(Query.EQ("name", name));
 
                 // if not found then search in nodes list
-                if(var_idx == null) 
+                if (var_idx == null)
                     var_idx = _initVarValue(name);
-                logger.Debug("value -> "+value.ToString() + "  type --> " + var_idx.systemType);
+                logger.Debug("value -> " + value.ToString() + "  type --> " + var_idx.systemType);
                 var_idx.value = Convert.ChangeType(value, Type.GetType(var_idx.systemType));
                 var_idx.timestamp = time;
+                var_idx.statuscode = status;
                 latestValues.Upsert(var_idx);
-            } 
-            catch (Exception e){
+            }
+            catch (Exception e)
+            {
                 logger.Error("Error in updating value for variable " + name);
                 logger.Error(e.Message);
-            }           
+            }
         }
 
         /// <summary>
@@ -257,35 +290,61 @@ namespace OpcProxyCore{
         /// </summary>
         /// <param name="names">List of names of the variables</param>
         /// <returns>Returns a list of dbVariable</returns>
-        public Task<List<ReadVarResponse>> readValue( string[] names ){
-            var t = Task.Run(()=>{
-                BsonArray bson_arr = new BsonArray();
-                foreach(string name in names ){
-                    bson_arr.Add(name);
-                }
-
-                var read_var =  latestValues.Find(Query.In("name",bson_arr)).ToList();
+        public Task<List<ReadVarResponse>> readValue(string[] names)
+        {
+            return Task.Run(() =>
+            {
                 List<ReadVarResponse> response = new List<ReadVarResponse>();
 
-                string l = "";
-                for(int i=0; i< names.Length; i++)
-                {   
-                    var var_i = read_var.Find( x => x.name == names[i] );
-                    if(  var_i == null) 
+                for (int i = 0; i < names.Length; i++)
+                {
+                    // yes, one could use latestValues.Find(Query.In("name", bson_arr)); and get all, 
+                    // but really this is a in mem DB and is not worth the additional complexity (since it won't return failed queries).
+                    var read_var = latestValues.FindOne(Query.EQ("name", names[i]));
+                    if (read_var == null)
                     {
-                        l += names[i] + ", ";
-                        response.Add( new ReadVarResponse(names[i],StatusCodes.BadNoEntryExists) );
+                        response.Add(new ReadVarResponse(names[i], StatusCodes.BadNoEntryExists));
+                        logger.Warn("Requested variable " + names[i] + " does not exist in DB and cannot be read.");
                     }
-                    else response.Add( new ReadVarResponse(var_i) );
-                }
-                if(l !="")  { 
-                    logger.Warn("Some of the varibles requested to read were not found: " + l );
+                    else response.Add(new ReadVarResponse(read_var));
                 }
                 return response;
-            });    
-
-            return t;        
+            });
         }
+
+        public Task<List<ReadVarResponse>> readValueFromClient(string[] names)
+        {
+            return Task.Run(async () =>{ 
+                List<ReadVarResponse> response = new List<ReadVarResponse>();
+                List<serverNode> nodes_to_read = new List<serverNode>();
+
+                for (int i = 0; i < names.Length; i++)
+                {
+                    try
+                    {
+                        var temp_sNode = getServerNode(names[i]);
+                        nodes_to_read.Add(temp_sNode);
+                    }
+                    catch
+                    {
+                        response.Add(new ReadVarResponse(names[i], StatusCodes.BadNoEntryExists));
+                        logger.Warn("Variable " + names[i] + " was not found in DB and cannot be read.");
+                    }
+                }
+                List<ReadVarResponse> client_response = await _serviceManager.opc.ReadNodesValuesWrapper(nodes_to_read);
+
+                foreach (var r in client_response)
+                {
+                    // updating the value in cache since we read it.
+                    updateBuffer(r.name, r.value, r.timestamp, r.statusCode.Code);
+                }
+
+                response.AddRange(client_response);
+                return response;
+            });
+
+        }
+
 
         /// <summary>
         /// Initialization of the variable value in DB, this is used if the variable does not exist yet, 
@@ -293,14 +352,18 @@ namespace OpcProxyCore{
         /// </summary>
         /// <param name="name">name of the variable value to initialize</param>
         /// <returns></returns>
-        private dbVariableValue _initVarValue(string name){
-            dbNode var_idx = nodes.FindOne(Query.EQ("name",name));
-            
-            if(var_idx == null)  {
-                throw new Exception("variable does not exist: "+name );
+        private dbVariableValue _initVarValue(string name)
+        {
+            dbNode var_idx = nodes.FindOne(Query.EQ("name", name));
+
+            if (var_idx == null)
+            {
+                throw new Exception("variable does not exist: " + name);
             }
-            else {
-                dbVariableValue new_var = new dbVariableValue {
+            else
+            {
+                dbVariableValue new_var = new dbVariableValue
+                {
                     Id = var_idx.Id,
                     name = var_idx.name,
                     systemType = var_idx.systemType,
@@ -310,12 +373,14 @@ namespace OpcProxyCore{
         }
 
     }
-    
-/// <summary> just a wrapper class for the JSON structure</summary>
-    public class dbConfigWrapper{
-        public dbConfig nodesDatabase {get; set;}
 
-        public dbConfigWrapper(){
+    /// <summary> just a wrapper class for the JSON structure</summary>
+    public class dbConfigWrapper
+    {
+        public dbConfig nodesDatabase { get; set; }
+
+        public dbConfigWrapper()
+        {
             nodesDatabase = new dbConfig();
         }
     }
@@ -323,13 +388,15 @@ namespace OpcProxyCore{
     /// <summary>
     /// Configuration handler for DBcache
     /// </summary>
-    public class dbConfig{
-    
-        public bool isInMemory { get; set; }
-        public string filename { get; set;}
-        public bool overwrite{get; set;}
+    public class dbConfig
+    {
 
-        public dbConfig(){
+        public bool isInMemory { get; set; }
+        public string filename { get; set; }
+        public bool overwrite { get; set; }
+
+        public dbConfig()
+        {
             isInMemory = true;
             filename = "DBcache.opcproxy.dat";
             overwrite = false;
@@ -339,14 +406,15 @@ namespace OpcProxyCore{
     /// <summary>
     /// Representation of an OPC Server Node. 
     /// </summary>
-    public class dbNode{
+    public class dbNode
+    {
         public int Id { get; set; }
-        public string name {get;set;}
-        public string identifier {get;set;}
-        public int internalIndex{get;set;}
-        public string classType {get;set;}
-        public string systemType {get;set;}
-        public string[] references{get;set;}
+        public string name { get; set; }
+        public string identifier { get; set; }
+        public int internalIndex { get; set; }
+        public string classType { get; set; }
+        public string systemType { get; set; }
+        public string[] references { get; set; }
     }
 
     /// <summary>
@@ -355,10 +423,11 @@ namespace OpcProxyCore{
     /// </summary>
     public class serverNode : dbNode
     {
-        public string serverIdentifier {get; set;}
-        public int currentServerIndex {get; set;}
+        public string serverIdentifier { get; set; }
+        public int currentServerIndex { get; set; }
 
-        public serverNode(dbNode n){
+        public serverNode(dbNode n)
+        {
             Id = n.Id;
             name = n.name;
             identifier = n.identifier;
@@ -378,29 +447,34 @@ namespace OpcProxyCore{
     /// index for that URI (which can change at any new session) and the internal node index assigned 
     /// at the node insertion time (which will not change).
     /// </summary>
-    public class dbNamespace{
+    public class dbNamespace
+    {
         public int Id { get; set; }
-        public int internalIndex {get; set;}
-        public string URI {get;set;}
-        public int currentServerIndex {get;set;}
+        public int internalIndex { get; set; }
+        public string URI { get; set; }
+        public int currentServerIndex { get; set; }
     }
 
     /// <summary>
     /// Variable stored value
     /// </summary>
-    public class dbVariableValue{
+    public class dbVariableValue
+    {
         public int Id { get; set; }
-        public string name{get;set;}
-        public object value{get;set;}
-        public string systemType {get;set;}
-        public DateTime timestamp {get;set;}
+        public string name { get; set; }
+        public object value { get; set; }
+        public string systemType { get; set; }
+        public DateTime timestamp { get; set; }
+        public uint statuscode { get; set; }
 
-        public dbVariableValue(){
+        public dbVariableValue()
+        {
             Id = -9;
             name = "does_not_exist";
             value = null;
             systemType = "null";
             timestamp = DateTime.UtcNow;
+            statuscode = StatusCodes.Good;
         }
     }
 
@@ -409,28 +483,37 @@ namespace OpcProxyCore{
     /// Parameters: **success** is true if the request was successfull, **statusCode** are OPC standard status codes for request and response see opc.ua.StatusCodes. 
     /// Trick: statusCode.ToString() return a human readable version of the error type.
     /// </summary>
-    public class ReadVarResponse : dbVariableValue {
-        public double timestampUTC_ms {
-            get  {
+    public class ReadVarResponse : dbVariableValue
+    {
+        public double timestampUTC_ms
+        {
+            get
+            {
                 return timestamp.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
             }
         }
-        public bool success {get; set;}
-        public StatusCode statusCode {get; set;} // this has a nice ToString() method that returns a human readable error
+        public bool success { get; set; }
+        /// <summary>
+        /// this has a nice ToString() method that returns a human readable error
+        /// </summary>
+        /// <value></value>
+        public StatusCode statusCode { get; set; }
 
-        public ReadVarResponse(string Name, uint code):base(){
-            success = false;
+        public ReadVarResponse(string Name, uint code) : base()
+        {
+            success = StatusCode.IsGood(code);
             name = Name;
             statusCode = new StatusCode(code);
         }
-        public ReadVarResponse(dbVariableValue v):base(){
+        public ReadVarResponse(dbVariableValue v) : base()
+        {
             Id = v.Id;
             name = v.name;
             value = v.value;
             systemType = v.systemType;
             timestamp = v.timestamp;
-            success = true;
-            statusCode = new StatusCode(StatusCodes.Good);
+            success = StatusCode.IsGood(v.statuscode);
+            statusCode = new StatusCode(v.statuscode);
         }
     }
 
@@ -439,24 +522,27 @@ namespace OpcProxyCore{
     /// Parameters: **success** is true if the request was successfull, **statusCode** are OPC standard status codes for request and response see opc.ua.StatusCodes. 
     /// Trick: statusCode.ToString() return a human readable version of the error type.
     /// </summary>
-    public class WriteVarResponse {
-        public string name {get;set;}
-        public bool success {get;set;}
-        public StatusCode statusCode {get;set;} // this has a nice ToString() method that returns a human readable error
-        public object value {get;set;}
-        public WriteVarResponse(string Name, object val){
+    public class WriteVarResponse
+    {
+        public string name { get; set; }
+        public bool success { get; set; }
+        public StatusCode statusCode { get; set; } // this has a nice ToString() method that returns a human readable error
+        public object value { get; set; }
+        public WriteVarResponse(string Name, object val)
+        {
             name = Name;
             success = true;
             value = val;
             statusCode = new StatusCode(StatusCodes.Good);
         }
 
-        public WriteVarResponse(string Name, uint code){
+        public WriteVarResponse(string Name, uint code)
+        {
             name = Name;
             success = false;
             value = null;
             statusCode = new StatusCode(code);
         }
     }
-    
+
 }
