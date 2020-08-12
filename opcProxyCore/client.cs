@@ -361,7 +361,7 @@ namespace OpcProxyClient
                     response[i].statusCode = StatusCodes.BadNoCommunication;
                 }
             }
-            // don't do the write, somehow it fuks up see Issue: https://github.com/OPCFoundation/UA-.NETStandard/issues/1091
+            // don't do the write, somehow it hungs up see Issue: https://github.com/OPCFoundation/UA-.NETStandard/issues/1091
             if(DefunctRequestCount > 0) return response;
 
             var sCodes = await Task.Factory.FromAsync<StatusCodeCollection>(beginWriteWrapper,endWriteWrapper, valuesToWrite);
@@ -371,11 +371,15 @@ namespace OpcProxyClient
             // Note: write does not need to send an ad hoc notification as the read, since if the write procedure is successfull
             // the opc-server must send and update-monitored-item call.
             for(int k=0; k< sCodes.Count; k++){
+                
+                response[k].success = StatusCode.IsGood(sCodes[k]) ;
+                response[k].statusCode = sCodes[k];
                 if(StatusCode.IsBad(sCodes[k]))
                 {            
-                    response[k].success = false ;
-                    response[k].statusCode = sCodes[k];
                     logger.Error("Failed write request on OPC-server for node: "+response[k].name +" status code " + sCodes[k].ToString());
+                }
+                else{
+                    _serviceManager.db.updateBuffer(response[k].name,response[k].value, DateTime.UtcNow, sCodes[k].Code);
                 }
             }
             return response;

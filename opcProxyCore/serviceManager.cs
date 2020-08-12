@@ -104,6 +104,8 @@ namespace OpcProxyCore{
         public void run(){
             subscribeOpcNodes();
             initConnectors();
+            Console.WriteLine("Connecor init finish");
+            forceNodesUpdate();
             logger.Info("Running...Press Ctrl-C to exit...");
             wait();
         }
@@ -217,11 +219,8 @@ namespace OpcProxyCore{
             return  db.readValueFromClient(names);
         }
 
-        public async void forceDBupdate(){
+        public async void forceNodesUpdate(){
             var resp =  await opc.ReadNodesValuesWrapper(db.getDbNodes());
-            foreach(var v in resp){
-                db.updateBuffer(v.name,v.value,v.timestamp,v.statusCode.Code);
-            }
         }
 
         /// <summary>
@@ -233,7 +232,6 @@ namespace OpcProxyCore{
         /// </summary>
         public void subscribeOpcNodes(){
             opc.subscribe( db.getDbNodes(), collectOnNotificationEventHandlers() );
-            forceDBupdate();
         }
 
         
@@ -384,6 +382,7 @@ namespace OpcProxyCore{
 
         /// <summary>
         /// Initialization. Everything that needs to be done for initializzation will be passed here.
+        /// This method must be syncronous.
         /// </summary>
         /// <param name="config">JSON configuration see Newtonsoft.Json for how to parse an object out of it</param>
         /// <param name="cts">Cancellation Token Source, to be able to gracefully shutdown in case of errors.</param>
