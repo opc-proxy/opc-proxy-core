@@ -318,7 +318,7 @@ namespace OpcProxyCore{
 
             foreach (var item in response)
             {
-                if(item.success) db.updateBuffer(item.name, item.value, DateTime.UtcNow );
+                if(item.success) db.updateBuffer(item.name, item.value, DateTime.UtcNow, item.statusCode.Code );
             }
             response.AddRange(bad_responses);
             return response;

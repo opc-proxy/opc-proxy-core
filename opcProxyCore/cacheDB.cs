@@ -119,8 +119,7 @@ namespace OpcProxyCore
 
             foreach (var itm in items.values)
             {
-                updateBuffer(items.name, itm.Value, itm.SourceTimestamp);
-                logger.Debug("Updating value for {0} to {1} at {2}", items.name, itm.Value, itm.SourceTimestamp);
+                updateBuffer(items.name, itm.Value, itm.SourceTimestamp,itm.StatusCode.Code);
             }
         }
 
@@ -263,17 +262,20 @@ namespace OpcProxyCore
         /// <param name="value"> updated value of variable</param>
         /// <param name="time"> timestamp of when it changed</param>
         /// <param name="status"> Status of variable, default to good </param>
-        public void updateBuffer(string name, object value, DateTime time, uint status = StatusCodes.Good)
+        public void updateBuffer(string name, object value, DateTime time, uint status )
         {
             try
             {
                 dbVariableValue var_idx = latestValues.FindOne(Query.EQ("name", name));
-
                 // if not found then search in nodes list
                 if (var_idx == null)
                     var_idx = _initVarValue(name);
-                logger.Debug("value -> " + value.ToString() + "  type --> " + var_idx.systemType);
-                var_idx.value = Convert.ChangeType(value, Type.GetType(var_idx.systemType));
+                logger.Debug("Request for Variable {0} to update.",name);
+                if(value != null )logger.Debug("\t Value: {0} ",value.ToString());
+                logger.Debug("\t Status: {0} ", new StatusCode(status).ToString());
+                
+                if(value != null) var_idx.value = Convert.ChangeType(value, Type.GetType(var_idx.systemType));
+                // else var_idx.value = null;
                 var_idx.timestamp = time;
                 var_idx.statuscode = status;
                 latestValues.Upsert(var_idx);
@@ -314,7 +316,7 @@ namespace OpcProxyCore
 
         public Task<List<ReadVarResponse>> readValueFromClient(string[] names)
         {
-            return Task.Run(async () =>{ 
+            return Task.Run(async() =>{ 
                 List<ReadVarResponse> response = new List<ReadVarResponse>();
                 List<serverNode> nodes_to_read = new List<serverNode>();
 
@@ -331,13 +333,8 @@ namespace OpcProxyCore
                         logger.Warn("Variable " + names[i] + " was not found in DB and cannot be read.");
                     }
                 }
+                // note that this also send a notification to all handlers with the new value (including updating db buffer)
                 List<ReadVarResponse> client_response = await _serviceManager.opc.ReadNodesValuesWrapper(nodes_to_read);
-
-                foreach (var r in client_response)
-                {
-                    // updating the value in cache since we read it.
-                    updateBuffer(r.name, r.value, r.timestamp, r.statusCode.Code);
-                }
 
                 response.AddRange(client_response);
                 return response;

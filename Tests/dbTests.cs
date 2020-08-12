@@ -51,7 +51,7 @@ namespace Tests
 
         [Fact]
         public void fillDBWithNewVar(){
-            cDB.updateBuffer("ciao",72,DateTime.UtcNow);
+            cDB.updateBuffer("ciao",72,DateTime.UtcNow, StatusCodes.Good);
             var q = cDB.latestValues.FindOne(Query.EQ("name","ciao"));
             Assert.NotNull(q);
             Assert.Equal(72, q.value);
@@ -60,7 +60,7 @@ namespace Tests
 
         [Fact]
         public async void readFromDB(){
-            cDB.updateBuffer("ciao",72,DateTime.UtcNow);
+            cDB.updateBuffer("ciao",72,DateTime.UtcNow, StatusCodes.Good);
             
             var q = await cDB.readValue( (new string[] {"ciao"}));
             Assert.Single(q);

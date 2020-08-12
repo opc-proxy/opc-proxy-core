@@ -46,6 +46,7 @@ namespace OpcProxyClient
         public event EventHandler<MonItemNotificationArgs> MonitoredItemChanged;
         public NodesSelector node_selector;
         public static Logger logger = null;
+        private int DefunctRequestCount = 0;
         public OPCclient(JObject config) 
         {
             user_config = config.ToObject<opcConfig>();
@@ -251,15 +252,26 @@ namespace OpcProxyClient
             for(int k=0; k <= (int)(nodes_to_read.Count / 500); k++){
                 int idx = k * 500;
                 int count = ( (k * 500 + 500) < nodes_to_read.Count ) ?  500 : (nodes_to_read.Count - k * 500 ) ;
+
                 if(count == 0 ) continue;
                 ReadValueIdCollection temp_nodes_to_read = new ReadValueIdCollection();
                 temp_nodes_to_read.AddRange(nodes_to_read.GetRange(idx, count));
-
                 DataValueCollection tmp_data_types;
                 DiagnosticInfoCollection tmp_di;
-                
-                session.Read(null,0.0, timestamp, temp_nodes_to_read, out tmp_data_types, out tmp_di);
-
+                // only in case there is a connection open, otherwise it hungs up forever, see issue: https://github.com/OPCFoundation/UA-.NETStandard/issues/1091
+                if(DefunctRequestCount == 0) session.Read(null,0.0, TimestampsToReturn.Server, nodes_to_read, out tmp_data_types, out tmp_di);
+                else {
+                    tmp_data_types = new DataValueCollection();
+                    foreach (var node in temp_nodes_to_read)
+                    {
+                        tmp_data_types.Add( new DataValue(){
+                            StatusCode = StatusCodes.BadNoCommunication,
+                            Value = null,
+                            ServerTimestamp = DateTime.UtcNow,
+                            SourceTimestamp = DateTime.UtcNow
+                        } );
+                    }
+                }
                 data_types.AddRange(tmp_data_types);
             }
             return data_types;
@@ -269,7 +281,6 @@ namespace OpcProxyClient
             return Task.Run(()=>{
                 ReadValueIdCollection r = new ReadValueIdCollection();
                 List<ReadVarResponse> resp = new List<ReadVarResponse>();
-
                 for( int k=0; k < nodes.Count; k++){
                     r.Add(new ReadValueId{ 
                         NodeId = new NodeId(nodes[k].serverIdentifier),
@@ -281,14 +292,27 @@ namespace OpcProxyClient
                 for( int k=0; k < nodes.Count; k++){
                     var temp_resp = new ReadVarResponse(nodes[k].name, dvc[k].StatusCode.Code);
                     temp_resp.timestamp = dvc[k].ServerTimestamp;
-                    temp_resp.value = dvc[k].Value;
+                    if(dvc[k].Value != null) temp_resp.value = dvc[k].Value;
                     temp_resp.systemType = nodes[k].systemType;
                     resp.Add( temp_resp );
                     logger.Debug("Read node " + nodes[k].name + ". Returns: " );
                     logger.Debug("\t Node ID: "       + nodes[k].serverIdentifier.ToString());
-                    logger.Debug("\t Value: " + dvc[k].Value.ToString());
+                    if(dvc[k].Value != null) logger.Debug("\t Value: " + dvc[k].Value.ToString());
                     logger.Debug("\t TimeStamp: " + dvc[k].ServerTimestamp.ToString());
                     logger.Debug("\t Status Code: " + dvc[k].StatusCode.ToString()); 
+
+                    // Send notification about the new read values
+                    MonItemNotificationArgs notification = new MonItemNotificationArgs();
+                    var d = new DataValue(){ 
+                        StatusCode = dvc[k].StatusCode,
+                        Value = dvc[k].Value,
+                        ServerTimestamp =  dvc[k].ServerTimestamp,
+                        SourceTimestamp = dvc[k].ServerTimestamp,
+                    };
+                    notification.values = new List<DataValue>(){d};
+                    notification.name = nodes[k].name;
+                    notification.dataType = Type.GetType(nodes[k].systemType);
+                    _sendNotification(notification);
                 }
                 return resp;
             });
@@ -331,11 +355,21 @@ namespace OpcProxyClient
                 logger.Debug("\t Value: " + valueToWrite.Value.Value.ToString());
                 logger.Debug("\t TimeStamp: " + valueToWrite.Value.SourceTimestamp.ToString());
                 logger.Debug("\t Status Code: " + valueToWrite.Value.StatusCode.ToString());
+                // if session is not connected to server
+                if(DefunctRequestCount > 0) {
+                    response[i].success = false ;
+                    response[i].statusCode = StatusCodes.BadNoCommunication;
+                }
             }
+            // don't do the write, somehow it fuks up see Issue: https://github.com/OPCFoundation/UA-.NETStandard/issues/1091
+            if(DefunctRequestCount > 0) return response;
+
             var sCodes = await Task.Factory.FromAsync<StatusCodeCollection>(beginWriteWrapper,endWriteWrapper, valuesToWrite);
             // By OPC Specs is assumed "sCodes" is a List of results for the Nodes to write (see 7.34 for StatusCode definition). 
             // The size and order of the list matches the size and order of the nodesToWrite request parameter. 
             // There is one entry in this list for each Node contained in the nodesToWrite parameter.
+            // Note: write does not need to send an ad hoc notification as the read, since if the write procedure is successfull
+            // the opc-server must send and update-monitored-item call.
             for(int k=0; k< sCodes.Count; k++){
                 if(StatusCode.IsBad(sCodes[k]))
                 {            
@@ -394,17 +428,36 @@ namespace OpcProxyClient
         {
             if (e.Status != null && ServiceResult.IsNotGood(e.Status))
             {
-                Console.WriteLine("{0} {1}/{2}", e.Status, sender.OutstandingRequestCount, sender.DefunctRequestCount);
+                DefunctRequestCount += 1;
+                logger.Error("Connection lost... curent status: {0} - retry {1} ", e.Status, DefunctRequestCount);
+                // set all nodes to Unreachable, the read will fail for all nodes, notify all handlers, update db cache
+                // just do this on  first trial
+                if( DefunctRequestCount == 1) {
+                    var nodes = _serviceManager.db.getDbNodes();
+                    foreach (var node in nodes)
+                    {
+                        // Send notification about the new read values
+                        MonItemNotificationArgs notification = new MonItemNotificationArgs();
+                        var d = new DataValue(StatusCodes.BadNoCommunication);
+                        notification.values = new List<DataValue>(){d};
+                        notification.name = node.name;
+
+                        Console.WriteLine("{0} ",notification.name );
+
+                        notification.dataType = Type.GetType(node.systemType);
+                        _sendNotification(notification);    
+                    }  
+                }
 
                 if (reconnectHandler == null)
                 {
-                    Console.WriteLine("--- RECONNECTING ---");
+                    logger.Info("Reconnecting...");
                     reconnectHandler = new SessionReconnectHandler();
                     reconnectHandler.BeginReconnect(sender, user_config.reconnectPeriod * 1000, Client_ReconnectComplete);
                 }
             }
         }
-
+        
         private void Client_ReconnectComplete(object sender, EventArgs e)
         {
             // ignore callbacks from discarded objects.
@@ -417,7 +470,11 @@ namespace OpcProxyClient
             reconnectHandler.Dispose();
             reconnectHandler = null;
 
-            Console.WriteLine("--- RECONNECTED ---");
+            logger.Info("Session Restored.");
+            DefunctRequestCount = 0;
+            // update all nodes
+            var nodes = _serviceManager.db.getDbNodes();
+            ReadNodesValuesWrapper(nodes);
         }
 
         /// <summary>
@@ -440,6 +497,15 @@ namespace OpcProxyClient
             if(n!=null){
                 notification.dataType = Type.GetType(n.systemType);
             }
+            _sendNotification(notification);
+        }
+
+        /// <summary>
+        /// This is an internal function to notify for a change of a variable,
+        /// is not supposed to be used by user, but in case is needed is available.
+        /// </summary>
+        /// <param name="notification"></param>
+        public void _sendNotification(MonItemNotificationArgs notification){
             EventHandler<MonItemNotificationArgs> handler = MonitoredItemChanged; 
             if (handler != null)
             {
