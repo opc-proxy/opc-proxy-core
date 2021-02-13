@@ -58,5 +58,5 @@ namespace myproxy
     }
 }
 ```
-For more details on connectors and how to build your own custom OPC-Proxy [visit the docs](https://opc-proxy.readthedocs.io/en/latest/GettingStarted/compile.html).
+For more  details on connectors and how to build your own custom OPC-Proxy [visit the docs](https://opc-proxy.readthedocs.io/en/latest/GettingStarted/compile.html).
 
