@@ -72,6 +72,7 @@ namespace OpcProxyClient
             }
 
             // FIXME - Retry strategy to be implemented here
+            // Actually maybe not... this is debatable
 
         }
 
@@ -438,19 +439,8 @@ namespace OpcProxyClient
                 // just do this on  first trial
                 if( DefunctRequestCount == 1) {
                     var nodes = _serviceManager.db.getDbNodes();
-                    foreach (var node in nodes)
-                    {
-                        // Send notification about the new read values
-                        MonItemNotificationArgs notification = new MonItemNotificationArgs();
-                        var d = new DataValue(StatusCodes.BadNoCommunication);
-                        notification.values = new List<DataValue>(){d};
-                        notification.name = node.name;
-
-                        Console.WriteLine("{0} ",notification.name );
-
-                        notification.dataType = Type.GetType(node.systemType);
-                        _sendNotification(notification);    
-                    }  
+                    notifyErrorOnNodes(nodes,StatusCodes.BadNotConnected);
+                    notifyNodesUnavailAfter(user_config.nodesUnavailAfter_sec);
                 }
 
                 if (reconnectHandler == null)
@@ -460,6 +450,37 @@ namespace OpcProxyClient
                     reconnectHandler.BeginReconnect(sender, user_config.reconnectPeriod * 1000, Client_ReconnectComplete);
                 }
             }
+        }
+
+        public void notifyErrorOnNodes(List<serverNode> nodes, StatusCode err)
+        {
+            foreach (var node in nodes)
+            {
+                // Send notification about the new read values
+                MonItemNotificationArgs notification = new MonItemNotificationArgs();
+                var d = new DataValue(err);
+                notification.values = new List<DataValue>(){d};
+                notification.name = node.name;
+                notification.dataType = Type.GetType(node.systemType);
+                _sendNotification(notification);
+            }  
+
+        }
+
+        private void notifyNodesUnavailAfter(int wait_time_sec) {
+            
+            var cancel = _serviceManager.cancellationToken.Token;
+            
+            Task t = Task.Run(async ()=>{
+                await Task.Delay(wait_time_sec * 1000, cancel);
+                if(!cancel.IsCancellationRequested && DefunctRequestCount > 0)
+                {
+                    var nodes = _serviceManager.db.getDbNodes();
+                    notifyErrorOnNodes( nodes, StatusCodes.BadDataUnavailable );
+                }
+            },
+            cancel);
+
         }
         
         private void Client_ReconnectComplete(object sender, EventArgs e)
@@ -552,11 +573,25 @@ namespace OpcProxyClient
         /// </summary>
         public string opcSystemName {get; set;}
 
+        /// <summary>
+        /// Nodes values are not only subscribed to change but also read periodically every nodeReadPeriod
+        /// to make sure their values are always fresh and in good state. Value is in seconds.
+        /// </summary>
+        public int nodeReadPeriod_sec{get; set;}
+
+        /// <summary>
+        /// If connection is lost, nodes are immediately set to BadConnection error, however this happens often,
+        /// for example pushing new software on server. After this time, nodes are set to unavailable
+        /// </summary>
+        public int nodesUnavailAfter_sec {get; set;}
+
         public opcConfig(){
             opcServerURL = "none";
             reconnectPeriod = 10;     
             publishingInterval = 1000;
             opcSystemName = "OPC";
+            nodeReadPeriod_sec = 60 * 5;
+            nodesUnavailAfter_sec = 60*1;
         }
     }
 

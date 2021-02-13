@@ -105,7 +105,7 @@ namespace OpcProxyCore{
             subscribeOpcNodes();
             initConnectors();
             Console.WriteLine("Connecor init finish");
-            forceNodesUpdate();
+            PeriodicNodeRead();
             logger.Info("Running...Press Ctrl-C to exit...");
             wait();
         }
@@ -219,7 +219,7 @@ namespace OpcProxyCore{
             return  db.readValueFromClient(names);
         }
 
-        public async void forceNodesUpdate(){
+        public async Task forceNodesUpdate(){
             var resp =  await opc.ReadNodesValuesWrapper(db.getDbNodes());
         }
 
@@ -324,6 +324,24 @@ namespace OpcProxyCore{
 
         public JObject getRawConfig(){
             return _config;
+        }
+
+        public void PeriodicNodeRead()
+        {
+            var intervall_ms = _config.ToObject<opcConfig>().nodeReadPeriod_sec * 1000;
+
+            Task t = Task.Run(async ()=>{
+
+                while(true)
+                {
+                    // skip read if it just disconnected
+                    if( opc.session.DefunctRequestCount > 0 ) continue;
+                    await forceNodesUpdate();
+                    await Task.Delay(intervall_ms, cancellationToken.Token);
+                    if(cancellationToken.IsCancellationRequested) break;
+                }
+            },cancellationToken.Token);
+
         }
     }
 
