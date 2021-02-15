@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using Newtonsoft.Json.Linq;
-
+using System.Linq ;
 using OpcProxyCore;
 using converter;
 
@@ -55,6 +55,9 @@ namespace OpcProxyClient
             logger = LogManager.GetLogger(this.GetType().Name);
         }
 
+        public bool isConnected(){
+            return DefunctRequestCount == 0;
+        }
 
         public void connect()
         {
@@ -439,7 +442,7 @@ namespace OpcProxyClient
                 // just do this on  first trial
                 if( DefunctRequestCount == 1) {
                     var nodes = _serviceManager.db.getDbNodes();
-                    notifyErrorOnNodes(nodes,StatusCodes.BadNotConnected);
+                    notifyErrorOnNodes(nodes.ToList(),StatusCodes.BadNotConnected);
                     notifyNodesUnavailAfter(user_config.nodesUnavailAfter_sec);
                 }
 
@@ -452,17 +455,24 @@ namespace OpcProxyClient
             }
         }
 
-        public void notifyErrorOnNodes(List<serverNode> nodes, StatusCode err)
+        public async void notifyErrorOnNodes(List<serverNode> nodes, StatusCode err)
         {
             foreach (var node in nodes)
             {
+                // get var
+                var db_var = await _serviceManager.db.readValue(node.name);
                 // Send notification about the new read values
                 MonItemNotificationArgs notification = new MonItemNotificationArgs();
                 var d = new DataValue(err);
-                notification.values = new List<DataValue>(){d};
+                d.Value = db_var.value;
+                d.ServerTimestamp = db_var.timestamp;
+                d.SourceTimestamp = db_var.timestamp;
+                notification.values = new List<DataValue>();
+                notification.values.Add(d);
                 notification.name = node.name;
+
                 notification.dataType = Type.GetType(node.systemType);
-                _sendNotification(notification);
+                _sendNotification(notification);    
             }  
 
         }

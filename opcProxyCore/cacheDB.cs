@@ -314,6 +314,28 @@ namespace OpcProxyCore
             });
         }
 
+        /// <summary>
+        /// Read a list of variables value from the DB cache given their names.
+        /// </summary>
+        /// <param name="name">name of the variables</param>
+        /// <returns>Returns a list of dbVariable</returns>
+        public Task<ReadVarResponse> readValue(string name)
+        {
+            return Task.Run(() =>
+            {
+                ReadVarResponse response;
+
+                var read_var = latestValues.FindOne(Query.EQ("name", name));
+                if (read_var == null)
+                {
+                    response = new ReadVarResponse(name, StatusCodes.BadNoEntryExists);
+                    logger.Warn("Requested variable " + name + " does not exist in DB and cannot be read.");
+                }
+                else response = new ReadVarResponse(read_var);
+                return response;
+            });
+        }
+
         public Task<List<ReadVarResponse>> readValueFromClient(string[] names)
         {
             return Task.Run(async() =>{ 
