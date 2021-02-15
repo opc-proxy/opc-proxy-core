@@ -108,6 +108,18 @@ namespace OpcProxyCore
             init();
         }
 
+        public void startFlushInterval()
+        {
+            Task.Run(async ()=>{
+                while(true)
+                {
+                    await Task.Delay(10000, _serviceManager.cancellationToken.Token);
+                    if(_serviceManager.cancellationToken.IsCancellationRequested) break;
+                    db.Rebuild();
+                }
+            }, _serviceManager.cancellationToken.Token);
+        }
+
         /// <summary>
         /// IOPCconnect.OnNotification interface implementation see <see cref="IOPCconnect"/> for description.
         /// </summary>
@@ -270,6 +282,7 @@ namespace OpcProxyCore
                 // if not found then search in nodes list
                 if (var_idx == null)
                     var_idx = _initVarValue(name);
+                
                 logger.Debug("Request for Variable {0} to update.",name);
                 if(value != null )logger.Debug("\t Value: {0} ",value.ToString());
                 logger.Debug("\t Status: {0} ", new StatusCode(status).ToString());
@@ -285,6 +298,7 @@ namespace OpcProxyCore
                 logger.Error("Error in updating value for variable " + name);
                 logger.Error(e.Message);
             }
+
         }
 
         /// <summary>

@@ -106,6 +106,7 @@ namespace OpcProxyCore{
             initConnectors();
             Console.WriteLine("Connecor init finish");
             PeriodicNodeRead();
+            db.startFlushInterval();
             logger.Info("Running...Press Ctrl-C to exit...");
             wait();
         }

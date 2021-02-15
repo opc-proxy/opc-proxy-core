@@ -55,8 +55,35 @@ namespace Tests
             var q = cDB.latestValues.FindOne(Query.EQ("name","ciao"));
             Assert.NotNull(q);
             Assert.Equal(72, q.value);
+        }
+
+        [Fact]
+        public void UpdateBufferDoesNotCreateNewEntryIfExist()
+        {
+            cDB.updateBuffer("ciao",73,DateTime.UtcNow, StatusCodes.Good);   
+            var latest_values = cDB.latestValues.FindAll();
+            Assert.Equal(1, latest_values.Count());
+            
+            cDB.updateBuffer("ciao",74,DateTime.UtcNow, StatusCodes.Good);
+            latest_values = cDB.latestValues.FindAll();
+            Assert.Equal(1,latest_values.Count());
 
         }
+
+        /*[Fact]
+        public async void memLeakCheck()
+        {
+
+            cDB.updateBuffer("ciao",73,DateTime.UtcNow, StatusCodes.Good);
+            var mem = cDB.mem.GetBuffer();
+            cDB.updateBuffer("ciao",75,DateTime.UtcNow, StatusCodes.Good);
+            dbNode node = new dbNode(){name="belloneCiccioHHHH"};
+            cDB.insertNodeIfNotExist(node);
+            await cDB.mem.FlushAsync();
+            var mem2 = cDB.mem.GetBuffer();
+            Console.WriteLine("mem - {0}",mem.Count());
+            Assert.True(mem2.SequenceEqual(mem));
+        }*/
 
         [Fact]
         public async void readFromDB(){
