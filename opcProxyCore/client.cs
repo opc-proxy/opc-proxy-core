@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using Newtonsoft.Json.Linq;
-
+using System.Linq ;
 using OpcProxyCore;
 using converter;
 
@@ -55,6 +55,9 @@ namespace OpcProxyClient
             logger = LogManager.GetLogger(this.GetType().Name);
         }
 
+        public bool isConnected(){
+            return DefunctRequestCount == 0;
+        }
 
         public void connect()
         {
@@ -437,16 +440,18 @@ namespace OpcProxyClient
                 // set all nodes to Unreachable, the read will fail for all nodes, notify all handlers, update db cache
                 // just do this on  first trial
                 if( DefunctRequestCount == 1) {
-                    var nodes = _serviceManager.db.getDbNodes();
-                    foreach (var node in nodes)
+                    var node_values = _serviceManager.db.latestValues.FindAll();
+                    foreach (var node in node_values.ToList())
                     {
                         // Send notification about the new read values
                         MonItemNotificationArgs notification = new MonItemNotificationArgs();
                         var d = new DataValue(StatusCodes.BadNoCommunication);
-                        notification.values = new List<DataValue>(){d};
+                        d.Value = node.value;
+                        d.ServerTimestamp = node.timestamp;
+                        d.SourceTimestamp = node.timestamp;
+                        notification.values = new List<DataValue>();
+                        notification.values.Add(d);
                         notification.name = node.name;
-
-                        Console.WriteLine("{0} ",notification.name );
 
                         notification.dataType = Type.GetType(node.systemType);
                         _sendNotification(notification);    
