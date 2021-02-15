@@ -335,7 +335,7 @@ namespace OpcProxyCore{
                 while(true)
                 {
                     // skip read if it just disconnected
-                    if( opc.session.DefunctRequestCount > 0 ) continue;
+                    if( !opc.isConnected() ) continue;
                     await forceNodesUpdate();
                     await Task.Delay(intervall_ms, cancellationToken.Token);
                     if(cancellationToken.IsCancellationRequested) break;

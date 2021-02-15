@@ -263,7 +263,7 @@ namespace OpcProxyClient
                 DataValueCollection tmp_data_types;
                 DiagnosticInfoCollection tmp_di;
                 // only in case there is a connection open, otherwise it hungs up forever, see issue: https://github.com/OPCFoundation/UA-.NETStandard/issues/1091
-                if(DefunctRequestCount == 0) session.Read(null,0.0, TimestampsToReturn.Server, nodes_to_read, out tmp_data_types, out tmp_di);
+                if(isConnected()) session.Read(null,0.0, TimestampsToReturn.Server, nodes_to_read, out tmp_data_types, out tmp_di);
                 else {
                     tmp_data_types = new DataValueCollection();
                     foreach (var node in temp_nodes_to_read)
@@ -360,13 +360,13 @@ namespace OpcProxyClient
                 logger.Debug("\t TimeStamp: " + valueToWrite.Value.SourceTimestamp.ToString());
                 logger.Debug("\t Status Code: " + valueToWrite.Value.StatusCode.ToString());
                 // if session is not connected to server
-                if(DefunctRequestCount > 0) {
+                if(!isConnected()) {
                     response[i].success = false ;
                     response[i].statusCode = StatusCodes.BadNoCommunication;
                 }
             }
             // don't do the write, somehow it hungs up see Issue: https://github.com/OPCFoundation/UA-.NETStandard/issues/1091
-            if(DefunctRequestCount > 0) return response;
+            if(!isConnected()) return response;
 
             var sCodes = await Task.Factory.FromAsync<StatusCodeCollection>(beginWriteWrapper,endWriteWrapper, valuesToWrite);
             // By OPC Specs is assumed "sCodes" is a List of results for the Nodes to write (see 7.34 for StatusCode definition). 
@@ -442,7 +442,7 @@ namespace OpcProxyClient
                 // just do this on  first trial
                 if( DefunctRequestCount == 1) {
                     var nodes = _serviceManager.db.getDbNodes();
-                    notifyErrorOnNodes(nodes.ToList(),StatusCodes.BadNotConnected);
+                    notifyErrorOnNodes(nodes,StatusCodes.BadNotConnected);
                     notifyNodesUnavailAfter(user_config.nodesUnavailAfter_sec);
                 }
 
@@ -483,7 +483,7 @@ namespace OpcProxyClient
             
             Task t = Task.Run(async ()=>{
                 await Task.Delay(wait_time_sec * 1000, cancel);
-                if(!cancel.IsCancellationRequested && DefunctRequestCount > 0)
+                if(!cancel.IsCancellationRequested && !isConnected())
                 {
                     var nodes = _serviceManager.db.getDbNodes();
                     notifyErrorOnNodes( nodes, StatusCodes.BadDataUnavailable );
