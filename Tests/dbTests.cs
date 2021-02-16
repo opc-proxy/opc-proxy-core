@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using converter;
 using Opc.Ua ;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Globalization;
 
 namespace Tests
 {
@@ -70,20 +73,40 @@ namespace Tests
 
         }
 
-        /*[Fact]
+        [Fact]
         public async void memLeakCheck()
         {
+            var mem = GetMemoryUsage();
+            
+            for(int k=0; k< 10000; k++){
+                cDB.updateBuffer("ciao",73,DateTime.UtcNow, StatusCodes.Good);
+                cDB.updateBuffer("ciao",74,DateTime.UtcNow, StatusCodes.Good);
+            }
 
-            cDB.updateBuffer("ciao",73,DateTime.UtcNow, StatusCodes.Good);
-            var mem = cDB.mem.GetBuffer();
-            cDB.updateBuffer("ciao",75,DateTime.UtcNow, StatusCodes.Good);
-            dbNode node = new dbNode(){name="belloneCiccioHHHH"};
-            cDB.insertNodeIfNotExist(node);
-            await cDB.mem.FlushAsync();
-            var mem2 = cDB.mem.GetBuffer();
-            Console.WriteLine("mem - {0}",mem.Count());
-            Assert.True(mem2.SequenceEqual(mem));
-        }*/
+            var mem2 = GetMemoryUsage();
+            Assert.InRange(mem2/mem, 1.0, 1.05);
+        }
+        
+        public float GetMemoryUsage()
+        {
+            Process p = new Process();
+            p.StartInfo.UseShellExecute = false;
+            p.StartInfo.RedirectStandardOutput = true;
+            p.StartInfo.FileName = "/bin/bash";
+            p.StartInfo.Arguments = "/home/pan/work/dotNet/OpcProxyProject/opc-core/Tests/process_mem.sh";
+            p.Start();
+            string output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+
+            var l_o = output.Split("\n");
+            float mem = 0;
+            foreach (var item in l_o)
+            {
+               if(String.IsNullOrEmpty(item)|| String.IsNullOrWhiteSpace(item)) continue;
+               mem = mem + float.Parse(item.Trim(),CultureInfo.InvariantCulture);
+            }
+            return mem;
+        }
 
         [Fact]
         public async void readFromDB(){

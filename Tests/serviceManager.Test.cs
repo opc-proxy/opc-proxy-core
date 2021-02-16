@@ -24,7 +24,7 @@ namespace Tests
                 },
 
                 'loggerConfig' :{
-                    'loglevel' :'debug'
+                    'loglevel' :'info'
                 },
 
                 'nodesLoader' : {

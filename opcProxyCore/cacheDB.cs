@@ -110,10 +110,12 @@ namespace OpcProxyCore
 
         public void startFlushInterval()
         {
+            
+
             Task.Run(async ()=>{
                 while(true)
                 {
-                    await Task.Delay(10000, _serviceManager.cancellationToken.Token);
+                    await Task.Delay(60000, _serviceManager.cancellationToken.Token);
                     if(_serviceManager.cancellationToken.IsCancellationRequested) break;
                     db.Rebuild();
                 }
