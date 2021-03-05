@@ -216,7 +216,7 @@ namespace OpcProxyCore
 
             List<serverNode> Out = new List<serverNode> { };
             var nodes_list = nodes.FindAll();
-            logger.Info("Number of selected nodes: " + nodes_list.Count());
+            logger.Debug("Number of selected nodes: " + nodes_list.Count());
 
             foreach (var node in nodes_list)
             {

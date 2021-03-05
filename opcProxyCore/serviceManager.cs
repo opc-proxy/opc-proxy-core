@@ -232,7 +232,9 @@ namespace OpcProxyCore{
         /// all the event handlers are invoked, there is no filter currently.
         /// </summary>
         public void subscribeOpcNodes(){
-            opc.subscribe( db.getDbNodes(), collectOnNotificationEventHandlers() );
+            var nodes = db.getDbNodes();
+            logger.Info("Number of selected nodes: " + nodes.Count);
+            opc.subscribe( nodes, collectOnNotificationEventHandlers() );
         }
 
         
