@@ -39,10 +39,9 @@ namespace OpcProxyClient
     {
         public opcConfig user_config;
         public Session session;
-        SessionReconnectHandler reconnectHandler;
+        SessionReconnectHandler reconnectHandler = null;
         static bool autoAccept = false;
         static ExitCode exitCode;
-
         public event EventHandler<MonItemNotificationArgs> MonitoredItemChanged;
         public NodesSelector node_selector;
         public static Logger logger = null;
@@ -56,7 +55,8 @@ namespace OpcProxyClient
         }
 
         public bool isConnected(){
-            return DefunctRequestCount == 0;
+            
+            return (DefunctRequestCount == 0 && session.KeepAliveStopped == false);
         }
 
         public void connect()
@@ -110,7 +110,7 @@ namespace OpcProxyClient
 
             if (haveAppCertificate)
             {
-                config.ApplicationUri = Utils.GetApplicationUriFromCertificate(config.SecurityConfiguration.ApplicationCertificate.Certificate);
+                config.ApplicationUri = X509Utils.GetApplicationUriFromCertificate(config.SecurityConfiguration.ApplicationCertificate.Certificate);
                 if (config.SecurityConfiguration.AutoAcceptUntrustedCertificates)
                 {
                     autoAccept = true;
@@ -452,7 +452,7 @@ namespace OpcProxyClient
                     reconnectHandler = new SessionReconnectHandler();
                     reconnectHandler.BeginReconnect(sender, user_config.reconnectPeriod * 1000, Client_ReconnectComplete);
                 }
-            }
+            }            
         }
 
         public async void notifyErrorOnNodes(List<serverNode> nodes, StatusCode err)

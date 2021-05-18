@@ -337,11 +337,12 @@ namespace OpcProxyCore{
 
                 while(true)
                 {
-                    // skip read if it just disconnected
-                    if( !opc.isConnected() ) continue;
-                    await forceNodesUpdate();
-                    await Task.Delay(intervall_ms, cancellationToken.Token);
                     if(cancellationToken.IsCancellationRequested) break;
+                    await Task.Delay(intervall_ms, cancellationToken.Token);
+                    // skip read if it is disconnected
+                    if( !opc.isConnected() ) continue;
+                    logger.Debug("Periodic Read Initiated");
+                    await forceNodesUpdate();
                 }
             },cancellationToken.Token);
 
