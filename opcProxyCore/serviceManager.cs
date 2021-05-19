@@ -337,8 +337,8 @@ namespace OpcProxyCore{
 
                 while(true)
                 {
-                    if(cancellationToken.IsCancellationRequested) break;
                     await Task.Delay(intervall_ms, cancellationToken.Token);
+                    if(cancellationToken.IsCancellationRequested) break;
                     // skip read if it is disconnected
                     if( !opc.isConnected() ) continue;
                     logger.Debug("Periodic Read Initiated");
