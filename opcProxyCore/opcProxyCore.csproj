@@ -21,7 +21,7 @@
     <PackageReference Include="LiteDB" Version="5.0.10" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NLog" Version="4.7.10" />
-    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua" Version="1.4.365.23" />
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua" Version="1.4.368.58" />
 	    <!--<PackageReference Include="OPCFoundation.NetStandard.Opc.Ua" Version="1.4.364.40" />-->
   </ItemGroup>
   
